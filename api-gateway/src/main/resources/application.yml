@@ -1,0 +1,56 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: api-gateway
+
+  # --- Database (Usually only in Auth-Service, move if possible) ---
+  datasource:
+    url: jdbc:mysql://localhost:3306/auth
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+  # --- Gateway Routing ---
+  cloud:
+    gateway:
+      routes:
+        - id: user_management_service
+          uri: lb://user-management-service
+          predicates:
+            - Path=/students/**, teachers/**, parents/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
+        - id: auth_service
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/**
+
+
+
+# --- Discovery & Logging ---
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.security.web.server.MatcherSecurityWebFilterChain: TRACE
