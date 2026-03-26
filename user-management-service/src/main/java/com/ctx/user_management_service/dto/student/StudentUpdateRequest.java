@@ -1,33 +1,27 @@
-package com.ctx.user_management_service.models;
+package com.ctx.user_management_service.dto.student;
 
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
-@Entity
-@Table(name = "student_profile")
-public class Student {
-    @Id
+@Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = false)
+public class StudentUpdateRequest {
     private UUID studentId;
-
     private String fullName;
     private String email;
     private LocalDate dateOfBirth;
     private String enrollmentNumber;
     private String parentEmail;
     private Boolean isActive;
-
-    public  Student(UUID id){
-        this.setStudentId(id);
-    }
 }
