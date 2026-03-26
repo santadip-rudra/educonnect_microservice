@@ -7,7 +7,7 @@ spring:
 
   # --- Database (Usually only in Auth-Service, move if possible) ---
   datasource:
-    url: jdbc:mysql://localhost:3306/auth
+    url: jdbc:mysql://localhost:3306/auth&createDatabaseIfNotExist=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -37,6 +37,11 @@ spring:
           uri: lb://auth-service
           predicates:
             - Path=/auth/**
+
+        - id: assessment_service
+          uri: lb://assessment-service
+          predicates:
+              - Path= /assessment/**
 
 
 
