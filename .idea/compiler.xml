@@ -17,6 +17,7 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.44/lombok-1.18.44.jar" />
         </processorPath>
+        <module name="parent-access-service" />
         <module name="user-management-service" />
         <module name="auth-service" />
         <module name="course_service" />
@@ -32,6 +33,7 @@
       <module name="auth-service" options="-parameters" />
       <module name="course_service" options="-parameters" />
       <module name="eureka-server" options="-parameters" />
+      <module name="parent-access-service" options="-parameters" />
       <module name="user-management-service" options="-parameters" />
       <module name="user-service" options="-parameters" />
     </option>
