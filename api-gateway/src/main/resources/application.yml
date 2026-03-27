@@ -33,6 +33,16 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
+        - id: course_service
+          uri: lb://course-service
+          predicates:
+            - Path=/course/**c
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
         - id: auth_service
           uri: lb://auth-service
           predicates:
