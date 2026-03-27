@@ -28,8 +28,8 @@ public class Course {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<CourseModule> modules;
 
-    @OneToMany(mappedBy = "course")
-    private List<Enrollment> enrollments;
+//    @OneToMany(mappedBy = "course")
+//    private List<Enrollment> enrollments;
 
 //    @OneToMany(mappedBy = "course")
 //    @ToString.Exclude
