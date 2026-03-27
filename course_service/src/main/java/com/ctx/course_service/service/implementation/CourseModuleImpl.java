@@ -152,7 +152,7 @@ public class CourseModuleImpl implements CourseModuleInterface{
 
     @Override
     public String getVideoUrl(UUID id) {
-        return ServletUriComponentsBuilder.fromCurrentContextPath().path("/v1/api/course/stream/")
+        return ServletUriComponentsBuilder.fromCurrentContextPath().path("/course/stream/")
                 .path(id.toString())
                 .toUriString();
     }
