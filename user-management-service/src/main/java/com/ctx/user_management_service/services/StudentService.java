@@ -50,4 +50,8 @@ public class StudentService {
         return studentRepo.findByStudentId(studentId)
                 .map(mapper::toResponseDTO).orElseThrow();
     }
+
+    public  Boolean exists(UUID studentId){
+        return studentRepo.existsById(studentId);
+    }
 }

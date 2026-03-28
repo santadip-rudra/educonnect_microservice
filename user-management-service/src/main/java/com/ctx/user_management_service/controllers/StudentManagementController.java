@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -20,6 +22,13 @@ public class StudentManagementController {
     @GetMapping
     public  ResponseEntity<List<StudentResponse>> findAllStudents(){
         return  ResponseEntity.ok(studentService.findAllStudents());
+    }
+
+    @GetMapping("exists")
+    public  ResponseEntity<Map<String, Object>> existsById(@RequestParam UUID studentId){
+        return  ResponseEntity.ok(
+                Map.of("exists",studentService.exists(studentId))
+        );
     }
 
     @GetMapping("{studentId}")
