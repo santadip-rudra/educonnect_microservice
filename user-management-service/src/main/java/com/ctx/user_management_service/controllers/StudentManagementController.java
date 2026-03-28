@@ -1,21 +1,37 @@
 package com.ctx.user_management_service.controllers;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.ctx.user_management_service.dto.student.StudentResponse;
+import com.ctx.user_management_service.dto.student.StudentUpdateRequest;
+import com.ctx.user_management_service.services.StudentService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("students")
+@RequestMapping("student")
+@RequiredArgsConstructor
 public class StudentManagementController {
 
+    private final StudentService studentService;
+
     @GetMapping
-    public  String test(@RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-User-Role") String role){
-        System.out.println(userId);
-        System.out.println(role);
-        return  "Working";
+    public  ResponseEntity<List<StudentResponse>> findAllStudents(){
+        return  ResponseEntity.ok(studentService.findAllStudents());
     }
+
+    @GetMapping("{studentId}")
+    public  ResponseEntity<StudentResponse> findByStudentId(@PathVariable UUID studentId){
+        return  ResponseEntity.ok(studentService.findByStudentId(studentId));
+    }
+
+    @PostMapping
+    public ResponseEntity<StudentResponse> updateStudent(@RequestBody StudentUpdateRequest request, @RequestHeader("X-User-Id") UUID studentId){
+     return ResponseEntity.ok(studentService.update(studentId,request));
+    }
+
+
 
 }

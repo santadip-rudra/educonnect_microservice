@@ -19,7 +19,7 @@ public class HeaderFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        String userId = request.getHeader("X-User_Id");
+        String userId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-role");
         String username = request.getHeader("X-User-name");
 

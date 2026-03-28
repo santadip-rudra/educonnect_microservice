@@ -20,7 +20,14 @@ public class Student {
     @Id
     private UUID studentId;
 
+    private String fullName;
+    private String email;
     private LocalDate dateOfBirth;
     private String enrollmentNumber;
     private String parentEmail;
+    private Boolean isActive;
+
+    public  Student(UUID id){
+        this.setStudentId(id);
+    }
 }
