@@ -33,6 +33,16 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
+        - id: student_registry_service
+          uri: lb://student-registry-service
+          predicates:
+            - Path=/demographics/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
         - id: auth_service
           uri: lb://auth-service
           predicates:

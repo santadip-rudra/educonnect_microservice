@@ -10,6 +10,9 @@ import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+
 @RequiredArgsConstructor
 @Component
 public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResponseDTO>{
@@ -26,14 +29,15 @@ public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResp
 
     @Override
     public CourseResponseDTO toResponseDTO(Course entity) {
+        List<ModuleResponseDTO> module=entity.getModules().stream().map(module1 -> getModule(module1)).toList();
         return new CourseResponseDTO(
                 entity.getCourseId(),
                 entity.getTitle(),
                 entity.getDescription(),
                 entity.getCourseCode(),
                 entity.getDuration(),
-                entity.getTeacherId()
-
+                entity.getTeacherId(),
+                module
         );
     }
 

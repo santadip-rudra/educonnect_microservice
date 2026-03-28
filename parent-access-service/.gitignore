@@ -31,13 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-
-uploads
-
-# Ignore secret config
-src/main/resources/application-secret.properties
-
-
-
-#ignore logs
-logs

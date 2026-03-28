@@ -23,7 +23,6 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final AuthDetailsService authDetailsService;
 
 
     public AuthResponseDto register(AuthRequestDto requestDto){
