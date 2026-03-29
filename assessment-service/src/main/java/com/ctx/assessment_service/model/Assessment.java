@@ -28,6 +28,7 @@ public class Assessment {
     private AssessmentType type;
 
 
+    @Column(nullable = false)
     private UUID courseId;
 
     @OneToOne(mappedBy = "assessment")

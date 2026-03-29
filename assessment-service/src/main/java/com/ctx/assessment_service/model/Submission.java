@@ -1,7 +1,7 @@
 package com.ctx.assessment_service.model;
 
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.ctx.assessment_service.model.attachment.assignment.AssignmentAttachment;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

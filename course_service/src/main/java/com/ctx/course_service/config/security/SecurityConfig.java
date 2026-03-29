@@ -1,0 +1,30 @@
+package com.ctx.course_service.config.security;
+
+import com.ctx.course_service.secuirity.HeaderFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity(debug = true)
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity
+                .csrf(config -> config.disable())
+                .authorizeHttpRequests(
+                        auth -> auth.anyRequest().permitAll()
+                )
+                .sessionManagement(
+                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .formLogin(config -> config.disable())
+                .addFilterBefore(new HeaderFilter(), UsernamePasswordAuthenticationFilter.class)
+                .build();
+    }
+}

@@ -49,7 +49,7 @@ public class AssessmentFactory {
                 list.add(assessment);
             }
         }
-        return list.getFirst();
+        return list.get(0);
     }
 
     /**
@@ -67,7 +67,7 @@ public class AssessmentFactory {
                 list.add(stringStringMap);
             }
         }
-        return list.getFirst();
+        return list.get(0);
     }
 
     public AssessmentServeDTO serveAssessment(UUID assessmentId, String assessmentType , CurrentUser user) throws BadRequestException {
@@ -78,7 +78,7 @@ public class AssessmentFactory {
                 list.add(assessmentServeDTO);
             }
         }
-        return list.getFirst();
+        return list.get(0);
     }
 
     public AssessmentReportDTO getReport(UUID submissionId, CurrentUser user, String assessmentType) throws BadRequestException {
@@ -89,7 +89,7 @@ public class AssessmentFactory {
                 list.add(report);
             }
         }
-        return list.getFirst();
+        return list.get(0);
     }
 }
 

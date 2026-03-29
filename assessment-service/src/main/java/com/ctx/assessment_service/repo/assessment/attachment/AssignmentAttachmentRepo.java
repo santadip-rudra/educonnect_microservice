@@ -1,6 +1,6 @@
 package com.ctx.assessment_service.repo.assessment.attachment;
 
-import com.ctx.assessment_service.model.AssignmentAttachment;
+import com.ctx.assessment_service.model.attachment.assignment.AssignmentAttachment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

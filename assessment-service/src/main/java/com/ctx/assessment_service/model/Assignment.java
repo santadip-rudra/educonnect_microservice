@@ -1,5 +1,6 @@
 package com.ctx.assessment_service.model;
 
+import com.ctx.assessment_service.model.attachment.assignment.AssignmentAttachment;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

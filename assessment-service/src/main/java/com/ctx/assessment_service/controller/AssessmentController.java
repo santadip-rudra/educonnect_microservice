@@ -15,8 +15,8 @@ import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +28,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/api/assessment")
+@RequestMapping("/assessment")
 //@Tag(name = "09 AssessmentController")
 /**
  * REST controller for handling assessment related requests
@@ -46,6 +46,7 @@ public class AssessmentController {
      */
 
     @PostMapping("/create")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<GenericResponse<Map<String,String>>> createAssignment(
             @RequestBody CreateAssessmentRequestDTO dto,
             @AuthenticationPrincipal CurrentUser user
@@ -72,6 +73,7 @@ public class AssessmentController {
      * @throws BadRequestException
      */
     @PostMapping("/submit")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<GenericResponse<Map<String,String>>> submitAssessment(
             @RequestPart("request") AssessmentRequestDTO dto ,
             @AuthenticationPrincipal  CurrentUser user,
@@ -96,6 +98,7 @@ public class AssessmentController {
     }
 
     @GetMapping("/get-assessment/{assessmentType}/{assessmentId}")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT') or hasRole('ADMIN')")
     public ResponseEntity<GenericResponse<AssessmentServeDTO>> serveAssessment(
             @PathVariable("assessmentId") UUID assessmentId,
             @PathVariable("assessmentType") String assessmentType,
@@ -112,7 +115,8 @@ public class AssessmentController {
     }
 
     @GetMapping("/report/{assessmentType}/{submissionId}")
-    private ResponseEntity<GenericResponse<AssessmentReportDTO>> getReport(
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN') or hasRole('STUDENT')")
+    public ResponseEntity<GenericResponse<AssessmentReportDTO>> getReport(
             @PathVariable("submissionId") UUID submissionId,
             @AuthenticationPrincipal CurrentUser user,
             @PathVariable("assessmentType") String assessmentType
