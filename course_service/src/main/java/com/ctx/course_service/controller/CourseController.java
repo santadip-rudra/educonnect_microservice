@@ -21,127 +21,124 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.apache.commons.codec.EncoderException;
+import ws.schild.jave.EncoderException;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/course")
 public class CourseController {
+
     private final TeacherClient client;
     private final CourseService courseService;
-    private  final CourseModuleInterface courseVideoInterface;
+    private final CourseModuleInterface courseModuleInterface;
 
-
-    @GetMapping
-    public String test(){
-        return  "working";
-    }
-
-    @PostMapping("add-course")
+    @PostMapping("/add-course")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<CourseResponseDTO> addCourse(@RequestBody CourseRequestDTO course , @AuthenticationPrincipal CurrentUser user) throws Exception {
-        System.out.println(user.getUserId());
-      TeacherResponse t =client.getTeacherById(user.getUserId())
-                .orElseThrow(()-> new Exception("Teacher not found"));
-        return  ResponseEntity.ok(
-                courseService.addCourse(course,t.getTeacherId()));
+    public ResponseEntity<CourseResponseDTO> addCourse(
+            @RequestBody CourseRequestDTO course,
+            @AuthenticationPrincipal CurrentUser user) throws Exception {
 
+        TeacherResponse t = client.getTeacherById(user.getUserId())
+                .orElseThrow(() -> new Exception("Teacher not found"));
+
+        return ResponseEntity.ok(courseService.addCourse(course, t.getTeacherId()));
     }
 
     @PostMapping("/add-module")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<ModuleResponseDTO> addVideo(
+    public ResponseEntity<ModuleResponseDTO> uploadModule(
             @RequestParam MultipartFile file,
             @RequestParam String title,
             @RequestParam UUID courseId,
-            @AuthenticationPrincipal CurrentUser user) throws IOException, EncoderException, ws.schild.jave.EncoderException, UserIdDonotMatchException {
-        return ResponseEntity.ok(courseVideoInterface.uploadModule(file,title,courseId,user.getUserId()));
+            @AuthenticationPrincipal CurrentUser user)
+            throws IOException, EncoderException, UserIdDonotMatchException {
+
+        return ResponseEntity.ok(
+                courseModuleInterface.uploadModule(file, title, courseId, user.getUserId())
+        );
     }
 
+    @PostMapping("/{courseId}/module/{moduleId}/update-module")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<CourseModule> updateModule(
+            @RequestParam MultipartFile file,
+            @RequestParam String title,
+            @PathVariable UUID courseId,
+            @PathVariable UUID moduleId,
+            @AuthenticationPrincipal CurrentUser user) throws IOException {
 
-        @PostMapping("/{courseId}/video/{videoId}/update-video")
-        @PreAuthorize("hasRole('TEACHER')")
-        public ResponseEntity<CourseModule> updateVideo(
-                @RequestParam MultipartFile file,
-                @PathVariable UUID courseId,
-                @RequestParam String title,
-                @PathVariable UUID videoId,
-              @AuthenticationPrincipal CurrentUser user)
-                throws IOException, EncoderException {
+        return ResponseEntity.ok(
+                courseModuleInterface.updateModule(file, title, moduleId, courseId, user.getUserId())
+        );
+    }
 
-            return ResponseEntity.ok(
-                   courseVideoInterface.updateVideoResource(file,title,videoId,courseId,user.getUserId())
-            );
-        }
+    @DeleteMapping("/{courseId}/module/{moduleId}/delete-module")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> deleteModule(
+            @PathVariable UUID courseId,
+            @PathVariable UUID moduleId,
+            @AuthenticationPrincipal CurrentUser user)
+            throws UserIdDonotMatchException, IOException {
 
-        /**
-         * handles video deletion
-         * @param courseId The unique identifier of the course whose {@link CourseModule}(video) is to be deleted
-         * @param videoId The unique identifier of the video(module) that is to be deleted
-         * @return ResponseEntity of {@link CourseModule}
-         * @return Success message
-         * @throws IOException
-         * @throws ws.schild.jave.EncoderException
-         */
+        return ResponseEntity.ok(
+                new HashMap<>().put(
+                        "message",
+                        courseModuleInterface.deleteModuleById(moduleId, courseId, user.getUserId())
+                )
+        );
+    }
 
-        @DeleteMapping("/{courseId}/video/{videoId}/delete-video")
-        @PreAuthorize("hasRole('TEACHER')")
-        public ResponseEntity<String> deleteVideo(
-                @PathVariable UUID courseId,
-                @PathVariable UUID videoId,
-                @AuthenticationPrincipal CurrentUser user
-        ) throws UserIdDonotMatchException, IOException {
+    @GetMapping("/get-module/{id}")
+    public ResponseEntity<String> getModuleUrl(@PathVariable UUID id) {
+        return ResponseEntity.ok(courseModuleInterface.getModuleUrl(id));
+    }
 
+    @GetMapping("/stream/{moduleId}")
+    public ResponseEntity<Resource> streamContent(@PathVariable UUID moduleId) throws IOException {
+        Resource resource = courseModuleInterface.loadModuleAsResource(moduleId);
+        String filename = resource.getFilename();
+        String contentType = "application/octet-stream";
 
-            return ResponseEntity.ok(
-                   courseVideoInterface.deleteVideoResourceWithids(courseId, videoId,user.getUserId())
-            );
-        }
-
-
-        @GetMapping("/get-module/{id}")
-        public ResponseEntity<String> getVideo(@PathVariable UUID id) throws IOException {
-            String url=courseVideoInterface.getVideoUrl(id);
-            return ResponseEntity.ok(url);
-        }
-
-
-        @GetMapping("/stream/{moduleId}")
-        public ResponseEntity<Resource> streamContent(@PathVariable UUID moduleId) throws IOException {
-            Resource resource = courseVideoInterface.LoadVideoAsResource(moduleId);
-            String filename = resource.getFilename();
-            String contentType = "application/octet-stream";
-
-            if (filename != null) {
-                if (filename.endsWith(".pdf")) {
-                    contentType = "application/pdf";
-                } else if (filename.endsWith(".mp3")) {
-                    contentType = "audio/mpeg";
-                } else if (filename.endsWith(".mp4")) {
-                    contentType = "video/mp4";
-                }
+        if (filename != null) {
+            if (filename.endsWith(".pdf")) {
+                contentType = "application/pdf";
+            } else if (filename.endsWith(".mp3")) {
+                contentType = "audio/mpeg";
+            } else if (filename.endsWith(".mp4")) {
+                contentType = "video/mp4";
+            } else if (filename.endsWith(".mov")) {
+                contentType = "video/quicktime";
+            } else if (filename.endsWith(".mkv")) {
+                contentType = "video/x-matroska";
+            } else if (filename.endsWith(".wav")) {
+                contentType = "audio/wav";
+            } else if (filename.endsWith(".aac")) {
+                contentType = "audio/aac";
             }
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                    .body(resource);
         }
 
-
-        @GetMapping("/get-course/{courseId}")
-        public CourseResponseDTO getcourse( @PathVariable UUID courseId ) throws Exception {
-            return courseService.getByIdCourse(courseId);
-        }
-
-
-
-        @GetMapping("modules")
-        public ResponseEntity<List<ModuleResponseDTO>> getAllModulesOfaCourse(@RequestBody ModuleRequestDTO requestDTO)
-        {
-            return new ResponseEntity<>(courseService.getAllModulesOfACourse(requestDTO.courseId()), HttpStatus.OK);
-        }
-
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(resource);
     }
+
+    @GetMapping("/get-course/{courseId}")
+    public ResponseEntity<CourseResponseDTO> getCourse(@PathVariable UUID courseId) throws Exception {
+        return ResponseEntity.ok(courseService.getByIdCourse(courseId));
+    }
+
+    @GetMapping("/modules")
+    public ResponseEntity<List<ModuleResponseDTO>> getAllModulesOfCourse(
+            @RequestBody ModuleRequestDTO requestDTO) {
+        return new ResponseEntity<>(
+                courseService.getAllModulesOfACourse(requestDTO.courseId()),
+                HttpStatus.OK
+        );
+    }
+}
