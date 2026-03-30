@@ -2,6 +2,7 @@ package com.ctx.course_service.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,10 +27,10 @@ public class Course {
     private Double duration;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<CourseModule> modules;
+    private List<CourseModule> modules = new ArrayList<>();;
 
-//    @OneToMany(mappedBy = "course")
-//    private List<Enrollment> enrollments;
+    @OneToMany(mappedBy = "course")
+    private List<Enrollment> enrollments = new ArrayList<>();;
 
 //    @OneToMany(mappedBy = "course")
 //    @ToString.Exclude

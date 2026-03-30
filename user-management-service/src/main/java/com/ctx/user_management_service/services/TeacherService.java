@@ -32,7 +32,7 @@ public class TeacherService {
     public TeacherResponse update(UUID id, TeacherUpdateRequest request) throws UserNotFoundException {
         // Logic follows the student service: find or initialize a new instance for partial updates
         Teacher teacher = teacherRepo.findByTeacherId(id)
-                .orElseGet(() -> new Teacher(id, null, null));
+                .orElseGet(() -> new Teacher(id, null, null,null,null));
 
         UpdateUtil.setIfPresent(request.getDepartment(), teacher::setDepartment);
         UpdateUtil.setIfPresent(request.getQualification(), teacher::setQualification);

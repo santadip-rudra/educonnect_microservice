@@ -6,6 +6,7 @@ import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleRequestDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.dto.teacher.TeacherResponse;
+import com.ctx.course_service.dto.user.CurrentUser;
 import com.ctx.course_service.exceptions.custom_exceptions.UserIdDonotMatchException;
 import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.service.contract.CourseModuleInterface;
@@ -16,6 +17,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.apache.commons.codec.EncoderException;
@@ -25,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("course")
+@RequestMapping("/course")
 public class CourseController {
     private final TeacherClient client;
     private final CourseService courseService;
@@ -38,9 +41,10 @@ public class CourseController {
     }
 
     @PostMapping("add-course")
-    public ResponseEntity<CourseResponseDTO> addCourse(@RequestBody CourseRequestDTO course , @RequestHeader("X-User-Id") UUID teacherId) throws Exception {
-        System.out.println(teacherId);
-      TeacherResponse t =client.getTeacherById(teacherId)
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<CourseResponseDTO> addCourse(@RequestBody CourseRequestDTO course , @AuthenticationPrincipal CurrentUser user) throws Exception {
+        System.out.println(user.getUserId());
+      TeacherResponse t =client.getTeacherById(user.getUserId())
                 .orElseThrow(()-> new Exception("Teacher not found"));
         return  ResponseEntity.ok(
                 courseService.addCourse(course,t.getTeacherId()));
@@ -48,26 +52,28 @@ public class CourseController {
     }
 
     @PostMapping("/add-module")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ModuleResponseDTO> addVideo(
             @RequestParam MultipartFile file,
             @RequestParam String title,
             @RequestParam UUID courseId,
-            @RequestHeader("X-User-Id") UUID userId) throws IOException, EncoderException, ws.schild.jave.EncoderException, UserIdDonotMatchException {
-        return ResponseEntity.ok(courseVideoInterface.uploadModule(file,title,courseId,userId));
+            @AuthenticationPrincipal CurrentUser user) throws IOException, EncoderException, ws.schild.jave.EncoderException, UserIdDonotMatchException {
+        return ResponseEntity.ok(courseVideoInterface.uploadModule(file,title,courseId,user.getUserId()));
     }
 
 
         @PostMapping("/{courseId}/video/{videoId}/update-video")
+        @PreAuthorize("hasRole('TEACHER')")
         public ResponseEntity<CourseModule> updateVideo(
                 @RequestParam MultipartFile file,
                 @PathVariable UUID courseId,
                 @RequestParam String title,
                 @PathVariable UUID videoId,
-              @RequestHeader("X-User-Id") UUID userId)
+              @AuthenticationPrincipal CurrentUser user)
                 throws IOException, EncoderException {
 
             return ResponseEntity.ok(
-                   courseVideoInterface.updateVideoResource(file,title,videoId,courseId,userId)
+                   courseVideoInterface.updateVideoResource(file,title,videoId,courseId,user.getUserId())
             );
         }
 
@@ -82,15 +88,16 @@ public class CourseController {
          */
 
         @DeleteMapping("/{courseId}/video/{videoId}/delete-video")
+        @PreAuthorize("hasRole('TEACHER')")
         public ResponseEntity<String> deleteVideo(
                 @PathVariable UUID courseId,
                 @PathVariable UUID videoId,
-                @RequestHeader("X-User-Id") UUID userId
+                @AuthenticationPrincipal CurrentUser user
         ) throws UserIdDonotMatchException, IOException {
 
 
             return ResponseEntity.ok(
-                   courseVideoInterface.deleteVideoResourceWithids(courseId, videoId,userId)
+                   courseVideoInterface.deleteVideoResourceWithids(courseId, videoId,user.getUserId())
             );
         }
 

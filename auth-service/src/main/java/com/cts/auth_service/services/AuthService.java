@@ -1,12 +1,16 @@
 package com.cts.auth_service.services;
 
+import com.cts.auth_service.client.UserManagementServiceClient;
+import com.cts.auth_service.dto.AuthRegisterRequest;
 import com.cts.auth_service.dto.AuthRequestDto;
 import com.cts.auth_service.dto.AuthResponseDto;
+import com.cts.auth_service.exceptions.custom.UserAlreadyExistsException;
 import com.cts.auth_service.exceptions.custom.UserNotAuthenticatedException;
 import com.cts.auth_service.models.Role;
 import com.cts.auth_service.models.User;
 import com.cts.auth_service.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,16 +29,26 @@ public class AuthService {
     private final JwtService jwtService;
 
 
-    public AuthResponseDto register(AuthRequestDto requestDto){
-        userRepo.save(
+    private final UserManagementServiceClient userManagementServiceClient;
+
+
+    public AuthResponseDto register(AuthRequestDto requestDto) throws UserAlreadyExistsException {
+        if(userRepo.existsByUsername(requestDto.getUsername())){
+            throw new UserAlreadyExistsException("User with username["+ requestDto.getUsername() +"] already exists");
+        }
+        User user = userRepo.save(
         User.builder()
                 .username(requestDto.getUsername())
                 .password(encoder.encode(requestDto.getPassword()))
                 .role(Role.valueOf(requestDto.getRole()))
                 .build());
 
+        var data = userManagementServiceClient.register(
+                new AuthRegisterRequest(user.getUsername(),user.getUserId(),user.getRole().toString())
+        );
+
         return  AuthResponseDto.builder()
-                .message("registered succesfully")
+                .message(data.get("message"))
                 .status(true)
                 .build();
     }
@@ -53,6 +67,7 @@ public class AuthService {
             return  AuthResponseDto.builder()
                     .token(jwtToken)
                     .message("success")
+                    .userId(entity.getUserId())
                     .status(true)
                     .build();
         }

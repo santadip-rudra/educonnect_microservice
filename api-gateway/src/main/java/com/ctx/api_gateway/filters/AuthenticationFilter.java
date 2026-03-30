@@ -2,6 +2,7 @@ package com.ctx.api_gateway.filters;
 
 import com.ctx.api_gateway.dto.AuthRequestDto;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 @Component // 1. Crucial for Spring to detect the filter
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
@@ -51,11 +53,11 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     )
                     .bodyToMono(AuthRequestDto.class)
                     .flatMap(userDto -> {
-                        System.out.println("Adding headers: " + userDto.getUserId() + " - " + userDto.getRole());
                         return chain.filter(exchange.mutate()
                                 .request(exchange.getRequest().mutate()
                                         .header("X-User-Id", String.valueOf(userDto.getUserId()))
                                         .header("X-User-Role", userDto.getRole())
+                                        .header("X-User-username",userDto.getUsername())
                                         .build())
                                 .build());
                     });
