@@ -11,9 +11,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableDiscoveryClient
 @EnableMethodSecurity
 public class CourseServiceApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(CourseServiceApplication.class, args);
 	}
-
 }
