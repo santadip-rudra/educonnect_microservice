@@ -46,7 +46,7 @@ spring:
         - id: auth_service
           uri: lb://auth-service
           predicates:
-            - Path=/auth/**
+            - Path=/auth/** , /session/**
 
         - id: course_service
           uri: lb://course-service
