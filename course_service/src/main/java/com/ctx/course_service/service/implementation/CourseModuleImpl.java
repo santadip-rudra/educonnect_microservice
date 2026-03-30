@@ -13,7 +13,7 @@ import com.ctx.course_service.service.contract.CourseModuleInterface;
 import com.ctx.course_service.utils.video.VideoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value; // Fixed Import
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
@@ -34,8 +34,10 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CourseModuleImpl implements CourseModuleInterface{
+public class CourseModuleImpl implements CourseModuleInterface {
 
+    @Value("${gateway.url}")
+    private String gatewayUrl;
 
     @Value("${file.upload-dir-one}")
     private String uploadDir;
@@ -45,272 +47,274 @@ public class CourseModuleImpl implements CourseModuleInterface{
 
     private final CourseModuleRepo courseModuleRepo;
     private final CourseRepo courseRepo;
-    @Override
-    public ModuleResponseDTO uploadModule(MultipartFile file, String title, UUID courseId, UUID teacherId) throws IOException, EncoderException, UserIdDonotMatchException {
-        File tempFile = null;
-        Path tempPath=null;
-        Path finalFilePath=null;
 
-        try{
-            if(file==null || file.isEmpty())
-            {
-                throw new FileNotFoundException("file not found");
+    @Override
+    public ModuleResponseDTO uploadModule(MultipartFile file, String title, UUID courseId, UUID teacherId)
+            throws IOException, EncoderException, UserIdDonotMatchException {
+
+        Path tempPath = null;
+        Path finalFilePath = null;
+
+        try {
+            if (file == null || file.isEmpty()) {
+                throw new FileNotFoundException("File not found!!");
             }
+
+            if (file.getContentType() == null) {
+                throw new FileException("Could not determine file type!");
+            }
+
             Course course = courseRepo.findById(courseId)
                     .orElseThrow(() -> new IOException("Course does not exist"));
+
             if (!course.getTeacherId().equals(teacherId)) {
                 throw new UserIdDonotMatchException("Unauthorized: Only the course creator can upload modules.");
             }
-            String extension = file.getOriginalFilename()
-                    .substring(file.getOriginalFilename()
-                            .lastIndexOf("."));
-            MediaType mediaType=MediaType.parseMediaType(file.getContentType());
-            String folder;
-            ModuleType m;
-            if(mediaType.getType().equals("audio"))
-            {
-                folder="audio/";
-                m=ModuleType.AUDIO;
 
-            }
-            else if(mediaType.getType().equals("video"))
-            {
-                folder="video/";
-                m=ModuleType.VIDEO;
+            String extension = file.getOriginalFilename()
+                    .substring(file.getOriginalFilename().lastIndexOf("."));
+
+            MediaType mediaType = MediaType.parseMediaType(file.getContentType());
+
+            String folder;
+            ModuleType moduleType;
+
+            if (mediaType.getType().equals("audio")) {
+                folder = "audio/";
+                moduleType = ModuleType.AUDIO;
+            } else if (mediaType.getType().equals("video")) {
+                folder = "video/";
+                moduleType = ModuleType.VIDEO;
             } else if (mediaType.equalsTypeAndSubtype(MediaType.APPLICATION_PDF)) {
-                folder="pdf/";
-                m=ModuleType.PDF;
-            }
-            else {
-                throw new FileException("Unsupported file type : ");
+                folder = "pdf/";
+                moduleType = ModuleType.PDF;
+            } else {
+                throw new FileException("Unsupported file type: " + file.getContentType());
             }
 
             Path targetFolderPath = Paths.get(this.uploadDir).resolve(folder);
-            Path targetTempFolderPath=Paths.get(this.tempUploadDir).resolve(folder);
-            if (!Files.exists(targetFolderPath))
-            {
+            Path targetTempFolderPath = Paths.get(this.tempUploadDir).resolve(folder);
+
+            if (!Files.exists(targetFolderPath)) {
                 Files.createDirectories(targetFolderPath);
-                System.out.println("created target folder ");
+                log.info("Created target folder: {}", targetFolderPath);
             }
-            if(!Files.exists(targetTempFolderPath))
-            {
+            if (!Files.exists(targetTempFolderPath)) {
                 Files.createDirectories(targetTempFolderPath);
-                System.out.println("created temp folder: ");
+                log.info("Created temp folder: {}", targetTempFolderPath);
             }
+
             UUID uuid = UUID.randomUUID();
+            String filename = uuid.toString() + extension;
 
-            String filename = uuid.toString()  + extension;
-            finalFilePath=targetFolderPath.resolve(filename);
-            Files.copy(file.getInputStream(),finalFilePath, StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("files have been copied to original file :");
+            finalFilePath = targetFolderPath.resolve(filename);
+            Files.copy(file.getInputStream(), finalFilePath, StandardCopyOption.REPLACE_EXISTING);
+            log.info("Module file saved to: {}", finalFilePath);
+
             double duration = 0.0;
-            tempPath = targetTempFolderPath.resolve("temp-" + uuid + extension);
-            Files.copy(finalFilePath, tempPath, StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("files have been copied to temp file :");
-            if (m != ModuleType.PDF) {
+
+            if (moduleType != ModuleType.PDF) {
+                tempPath = targetTempFolderPath.resolve("temp-" + uuid + extension);
+                Files.copy(finalFilePath, tempPath, StandardCopyOption.REPLACE_EXISTING);
                 duration = VideoUtil.getVideoDuration(tempPath.toFile());
-                System.out.println("duration calculated");
+                log.info("Duration calculated: {}", duration);
             }
 
-            var resp = courseModuleRepo.save(CourseModule.builder()
+            int nextSequenceOrder = courseModuleRepo.countByCourse(course) + 1;
+            log.info("Assigned sequence order: {}", nextSequenceOrder);
+
+            CourseModule savedModule = courseModuleRepo.save(CourseModule.builder()
                     .moduleId(uuid)
                     .contentUrl(filename)
                     .course(course)
                     .title(title)
-                    .moduleType(m)
+                    .moduleType(moduleType)
                     .duration(duration)
+                    .sequenceOrder(nextSequenceOrder)
                     .build());
 
-
-            log.info("course duration 01={}",course.getDuration());
-
-            course.setDuration(
-                    (course.getDuration() == null ? 0 : course.getDuration() )
-                            + duration);
-
+            log.info("Course duration before update: {}", course.getDuration());
+            course.setDuration((course.getDuration() == null ? 0 : course.getDuration()) + duration);
             courseRepo.save(course);
-            log.info("course duration 02={}",course.getDuration());
-    ModuleResponseDTO moduleResponseDTO=new ModuleResponseDTO(resp.getContentUrl(),resp.getModuleId(),resp.getTitle(),resp.getDuration(),resp.getSequenceOrder());
-            return moduleResponseDTO;
+            log.info("Course duration after update: {}", course.getDuration());
 
-        }catch (Exception e){
-            log.error(e.getMessage());
-            if(finalFilePath!=null)
-            {
+            return new ModuleResponseDTO(
+                    savedModule.getContentUrl(),
+                    savedModule.getModuleId(),
+                    savedModule.getTitle(),
+                    savedModule.getDuration(),
+                    savedModule.getSequenceOrder()
+            );
+
+        } catch (Exception e) {
+            log.error("Error uploading module: {}", e.getMessage());
+            if (finalFilePath != null) {
                 Files.deleteIfExists(finalFilePath);
-                log.info("was issue in saving the file in db so deleted from file system too : ");
+                log.info("Rolled back: deleted file from disk due to error");
             }
             throw e;
-        }finally {
-            System.out.println("finally block triggered");
+        } finally {
             if (tempPath != null) {
                 Files.deleteIfExists(tempPath);
-                log.info("Temp file deleted successfully: {}", tempPath);
+                log.info("Temp file deleted: {}", tempPath);
             }
         }
     }
 
-    @Override
-    public String getVideoUrl(UUID id) {
-        return ServletUriComponentsBuilder.fromCurrentContextPath().path("/course/stream/")
-                .path(id.toString())
-                .toUriString();
+    public String getModuleUrl(UUID id) {
+        return gatewayUrl + "/course/stream/" + id;
     }
 
     @Override
-    public Resource LoadVideoAsResource(UUID moduleId) throws IOException {
-        CourseModule video = courseModuleRepo.findById(moduleId)
-                .orElseThrow(() -> new RuntimeException("Video record not found"));
+    public Resource loadModuleAsResource(UUID moduleId) throws IOException {
+        CourseModule module = courseModuleRepo.findById(moduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Module record not found"));
 
         Path path = Paths.get(uploadDir)
-                .resolve(video.getModuleType().toString().toLowerCase())
-                .resolve(video.getContentUrl()).normalize();
-        System.out.println(path.toUri());
-        if (!Files.exists(path)) throw new RuntimeException("File not found on disk");
+                .resolve(module.getModuleType().toString().toLowerCase())
+                .resolve(module.getContentUrl())
+                .normalize();
+
+        log.info("Loading module from path: {}", path.toUri());
+
+        if (!Files.exists(path)) {
+            throw new ResourceNotFoundException("File not found on disk");
+        }
 
         return new UrlResource(path.toUri());
     }
 
     @Override
-    public CourseModule updateVideoResource(MultipartFile file, String title, UUID videoId, UUID courseId, UUID userId) throws IOException{
+    public CourseModule updateModule(MultipartFile file, String title, UUID moduleId, UUID courseId, UUID userId)
+            throws IOException {
 
         Path tempFilePath = null;
-        try{
 
-            CourseModule video = courseModuleRepo.findById(videoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Video record not found"));
+        try {
+            CourseModule module = courseModuleRepo.findById(moduleId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Module record not found"));
 
             Course course = courseRepo.findById(courseId)
                     .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-            if(userId!=course.getTeacherId())
-            {
-                throw new UserIdDonotMatchException("author of this course  do not match with the logged in User: ");
+
+            if (!userId.equals(course.getTeacherId())) {
+                throw new UserIdDonotMatchException("Author of this course does not match the logged in user");
             }
-            CourseModule module=courseModuleRepo.findById(videoId).orElseThrow(()->new ModuleNotFoundException("Module do not exists: "));
 
-            Path path = Paths.get(uploadDir).resolve(module.getModuleType().toString().toLowerCase()).resolve(video.getContentUrl()).normalize();
-
-            Files.deleteIfExists(path);
-
-            File directory = new File(uploadDir);
-            File tempDirectory = new File(tempUploadDir);
-
-            if(!directory.exists()) {
-                directory.mkdirs();
+            if (file.getContentType() == null) {
+                throw new FileException("Could not determine file type");
             }
-            if(!tempDirectory.exists()) {
-                tempDirectory.mkdirs();
+
+            Path existingFilePath = Paths.get(uploadDir)
+                    .resolve(module.getModuleType().toString().toLowerCase())
+                    .resolve(module.getContentUrl())
+                    .normalize();
+
+            Files.deleteIfExists(existingFilePath);
+
+            Path tempSubDir = Paths.get(tempUploadDir)
+                    .resolve(module.getModuleType().toString().toLowerCase());
+
+            if (!Files.exists(tempSubDir)) {
+                Files.createDirectories(tempSubDir);
             }
 
             String extension = file.getOriginalFilename()
-                    .substring(file.getOriginalFilename()
-                            .lastIndexOf("."));
+                    .substring(file.getOriginalFilename().lastIndexOf("."));
 
-//            String filename = video.getModuleId() + extension;
-//
-//            Path filePath = Paths.get(uploadDirOne)
-//                    .resolve(module.getModuleType()
-//                            .toString()
-//                            .toLowerCase())
-//                    .resolve(filename);
-
-            tempFilePath =
-                    Files.createTempFile(
-                            tempDirectory.toPath().resolve(module.getModuleType().toString().toLowerCase()),
-
-                            "temp-video-" + video.getModuleId() ,
-                            extension);
-
-            Files.copy(file.getInputStream(), tempFilePath , StandardCopyOption.REPLACE_EXISTING);
-            File tempFile = tempFilePath.toFile();
-            if (!tempFile.exists() || tempFile.length() == 0) {
-                throw new IOException("File was not written correctly to disk!");
-            }
-
-            var duration = VideoUtil.getVideoDuration(tempFile);
-
-            Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
-
-
-
-            System.out.println();
-            System.out.println();
-            System.out.println();
-            System.out.println("duration "+ duration);
-            System.out.println("video.getDuration() "+ video.getDuration());
-            System.out.println("course.getDuration() "+ course.getDuration());
-            System.out.println();
-            System.out.println();;
-
-            course.setDuration(
-                    course.getDuration() != null ?
-                            course.getDuration() - video.getDuration() + duration : 0
+            tempFilePath = Files.createTempFile(
+                    tempSubDir,
+                    "temp-module-" + module.getModuleId(),
+                    extension
             );
 
-            course.getModules().remove(video);
+            Files.copy(file.getInputStream(), tempFilePath, StandardCopyOption.REPLACE_EXISTING);
 
-            video.setDuration(duration);
-            video.setTitle(title);
-            courseModuleRepo.save(video);
+            if (!tempFilePath.toFile().exists() || tempFilePath.toFile().length() == 0) {
+                throw new IOException("File was not written correctly to disk");
+            }
 
+
+            double duration = 0.0;
+            MediaType mediaType = MediaType.parseMediaType(file.getContentType());
+            if (mediaType.getType().equals("video") || mediaType.getType().equals("audio")) {
+                duration = VideoUtil.getVideoDuration(tempFilePath.toFile());
+            }
+
+            Files.copy(tempFilePath, existingFilePath, StandardCopyOption.REPLACE_EXISTING);
+
+            course.setDuration(
+                    course.getDuration() != null
+                            ? course.getDuration() - module.getDuration() + duration
+                            : 0
+            );
+
+            module.setDuration(duration);
+            module.setTitle(title);
+            courseModuleRepo.save(module);
             courseRepo.save(course);
 
-            log.info("video deleted successfully course table");
-            System.out.println("video deleted successfully from course table");
-            return video;
+            log.info("Module updated successfully: {}", moduleId);
+            return module;
 
         } catch (Exception e) {
+            log.error("Error updating module: {}", e.getMessage());
             throw new RuntimeException(e);
-        }finally {
-            if(tempFilePath != null)
+        } finally {
+            if (tempFilePath != null)
                 Files.deleteIfExists(tempFilePath);
         }
     }
 
-
     @Override
-    public String deleteVideoResource(Course course, CourseModule module) throws IOException {
-        Path path = Paths.get(uploadDir).resolve(module.getModuleType().toString().toLowerCase()).resolve(module.getContentUrl()).normalize();
-        System.out.println("this is the path to be deleted " +path);
-        if(!Files.exists(path)){
-            throw new ResourceNotFoundException("Video not found [on disk]");
+    public String deleteModule(Course course, CourseModule module) throws IOException {
+        Path path = Paths.get(uploadDir)
+                .resolve(module.getModuleType().toString().toLowerCase())
+                .resolve(module.getContentUrl())
+                .normalize();
+
+        log.info("Deleting module file at path: {}", path);
+
+        if (!Files.exists(path)) {
+            throw new ResourceNotFoundException("Module file not found on disk");
         }
 
         module.setCourse(null);
         course.getModules().remove(module);
         course.setDuration(
-                course.getDuration() != null? course.getDuration() - module.getDuration() : 0
+                course.getDuration() != null ? course.getDuration() - module.getDuration() : 0
         );
         courseRepo.save(course);
-        log.info("video deleted successfully course table");
+
         try {
             Files.deleteIfExists(path);
+            log.info("Successfully deleted the file from disk: {}", path.toUri());
         } catch (IOException e) {
-            log.error(e.getMessage());
-            System.out.println(e.getMessage());
+            log.error("Failed to delete file from disk: {}", e.getMessage());
             throw new IOException(e);
         }
+
         courseModuleRepo.deleteById(module.getModuleId());
-        return "Successfully deleted the video with title " + module.getTitle() + " of course with title " + course.getTitle();
+        log.info("Module deleted successfully: {}", module.getModuleId());
+
+        return "Successfully deleted module '" + module.getTitle()
+                + "' from course '" + course.getTitle() + "'";
     }
 
     @Override
-    public String deleteVideoResourceWithids(UUID videoId, UUID courseId , UUID userId) throws IOException, UserIdDonotMatchException {
-        CourseModule video = courseModuleRepo.findById(videoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Video record not found"));
+    public String deleteModuleById(UUID moduleId, UUID courseId, UUID userId)
+            throws IOException, UserIdDonotMatchException {
+
+        CourseModule module = courseModuleRepo.findById(moduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Module record not found"));
 
         Course course = courseRepo.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
-        if(!course.getTeacherId().equals(userId))
-        {
-            System.out.println("teacher id "+course.getTeacherId());
-            System.out.println("login user id "+userId);
-            throw new UserIdDonotMatchException("TeacherId who uploaded the course do not match with loginId");
-        }
-        courseModuleRepo.deleteById(videoId);
-        return deleteVideoResource(course,video);
 
+        if (!course.getTeacherId().equals(userId)) {
+            throw new UserIdDonotMatchException("Teacher ID does not match the logged in user");
+        }
+
+        return deleteModule(course, module);
     }
 }
-
-
