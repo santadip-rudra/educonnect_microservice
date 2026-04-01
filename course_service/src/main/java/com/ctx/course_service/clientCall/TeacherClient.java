@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.Optional;
 import java.util.UUID;
 
-@FeignClient(name="user-management-service" , url="localhost:8081/teacher")
+@FeignClient(name="user-management-service" , contextId = "TeacherClient")
 public interface TeacherClient {
-    @GetMapping("/{id}")
+    @GetMapping("/teacher/{id}")
     Optional<TeacherResponse> getTeacherById(@PathVariable UUID id);
 }

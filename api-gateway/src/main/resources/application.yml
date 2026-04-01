@@ -7,7 +7,7 @@ spring:
 
   # --- Database (Usually only in Auth-Service, move if possible) ---
   datasource:
-    url: jdbc:mysql://localhost:3306/auth
+    url: jdbc:mysql://localhost:3306/auth?createDatabaseIfNotExist=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -26,7 +26,7 @@ spring:
         - id: user_management_service
           uri: lb://user-management-service
           predicates:
-            - Path=/student/**, /teacher/**, /parent/**
+            - Path=/student/**, /teacher/**, /parent/**, /user/**
           filters:
             - name: AuthenticationFilter
               args:
@@ -47,6 +47,31 @@ spring:
           uri: lb://auth-service
           predicates:
             - Path=/auth/**
+
+        - id: course_service
+          uri: lb://course-service
+          predicates:
+              - Path=/course/**, /enroll/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
+        - id: assessment_attachment
+          uri: lb://assessment-service
+          predicates:
+            - Path=/attachment/view/**
+
+        - id: assessment_service
+          uri: lb://assessment-service
+          predicates:
+              - Path=/assessment/**, /attachment/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
 
 
 

@@ -21,6 +21,8 @@ public class Parent {
     private UUID parentId;
     private String phoneNumber;
     private Boolean verified=false;
+    private Boolean isActive;
+    private String fullName;
 
     public Parent(UUID parentId) {
         this.parentId=parentId;
