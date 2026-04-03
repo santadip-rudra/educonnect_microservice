@@ -6,6 +6,7 @@ import com.cts.auth_service.dto.AuthRequestDto;
 import com.cts.auth_service.dto.AuthResponseDto;
 import com.cts.auth_service.exceptions.custom.UserAlreadyExistsException;
 import com.cts.auth_service.exceptions.custom.UserNotAuthenticatedException;
+import com.cts.auth_service.models.RefreshToken;
 import com.cts.auth_service.models.Role;
 import com.cts.auth_service.models.User;
 import com.cts.auth_service.repo.UserRepo;
@@ -27,6 +28,7 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
 
     private final UserManagementServiceClient userManagementServiceClient;
@@ -53,7 +55,7 @@ public class AuthService {
                 .build();
     }
 
-    public  AuthResponseDto login(AuthRequestDto requestDto) throws UsernameNotFoundException, UserNotAuthenticatedException {
+    public  AuthResponseDto login(AuthRequestDto requestDto) throws Exception {
         Authentication authentication =
                 authenticationManager.authenticate( new UsernamePasswordAuthenticationToken(
                         requestDto.getUsername(),requestDto.getPassword()
@@ -65,7 +67,8 @@ public class AuthService {
                     .orElseThrow(()-> new UsernameNotFoundException("User not found"));
             String jwtToken = jwtService.generateToken(entity);
             return  AuthResponseDto.builder()
-                    .token(jwtToken)
+                    .accessToken(jwtToken)
+                    .refreshToken(refreshTokenService.createToken(entity.getUserId()).getToken())
                     .message("success")
                     .userId(entity.getUserId())
                     .status(true)

@@ -37,11 +37,5 @@ public class User {
 
     @CreationTimestamp
     private LocalDateTime createdAt ;
-//
-//    @OneToMany(mappedBy = "user")
-//    private List<Notification> notifications;
-//
-//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-//    private List<AuditLog> auditLogs;
 
 }

@@ -14,7 +14,8 @@ import java.util.UUID;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthResponseDto {
-    private String token;
+    private String accessToken;
+    private String refreshToken;
     private String message;
     private Boolean status;
 
