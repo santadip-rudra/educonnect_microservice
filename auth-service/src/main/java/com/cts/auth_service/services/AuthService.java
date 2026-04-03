@@ -6,6 +6,7 @@ import com.cts.auth_service.dto.AuthRequestDto;
 import com.cts.auth_service.dto.AuthResponseDto;
 import com.cts.auth_service.exceptions.custom.UserAlreadyExistsException;
 import com.cts.auth_service.exceptions.custom.UserNotAuthenticatedException;
+import com.cts.auth_service.exceptions.custom.UserNotFoundException;
 import com.cts.auth_service.models.RefreshToken;
 import com.cts.auth_service.models.Role;
 import com.cts.auth_service.models.User;

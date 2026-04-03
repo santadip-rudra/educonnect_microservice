@@ -28,6 +28,10 @@ spring:
           predicates:
             - Path=/student/**, /teacher/**, /parent/**, /user/**
           filters:
+            - name: RateLimiter
+              args:
+                  routeId: user_management_service
+
             - name: AuthenticationFilter
               args:
                 authUrl: http://auth-service/auth/validate
@@ -36,8 +40,12 @@ spring:
         - id: student_registry_service
           uri: lb://student-registry-service
           predicates:
-            - Path=/demographics/**
+            - Path=/demographics/** , /docs/**
           filters:
+            - name: RateLimiter
+              args:
+                  routeId: student_registry_service
+
             - name: AuthenticationFilter
               args:
                 authUrl: http://auth-service/auth/validate
@@ -47,12 +55,19 @@ spring:
           uri: lb://auth-service
           predicates:
             - Path=/auth/** , /session/**
+          filters:
+            - name: RateLimiter
+              args:
+                routeId: auth_service
 
         - id: course_service
           uri: lb://course-service
           predicates:
               - Path=/course/**, /enroll/**
           filters:
+            - name: RateLimiter
+              args:
+                  routeId: course_service
             - name: AuthenticationFilter
               args:
                 authUrl: http://auth-service/auth/validate
@@ -62,12 +77,21 @@ spring:
           uri: lb://assessment-service
           predicates:
             - Path=/attachment/view/**
+          filters:
+            - name: RateLimiter
+              args:
+                routeId: assessment_attachment
+
 
         - id: assessment_service
           uri: lb://assessment-service
           predicates:
               - Path=/assessment/**, /attachment/**
           filters:
+            - name: RateLimiter
+              args:
+                routeId: assessment_service
+
             - name: AuthenticationFilter
               args:
                 authUrl: http://auth-service/auth/validate

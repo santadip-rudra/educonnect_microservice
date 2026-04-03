@@ -6,6 +6,7 @@ import com.ctx.student_registry_service.models.StudentDemographics;
 import com.ctx.student_registry_service.services.StudentDemographicsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,6 +18,7 @@ public class DemographicsController {
     private final StudentDemographicsService studentDemographicsService;
 
     @PostMapping
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<StudentDemographics> createDemographics(
             @RequestHeader("X-User-id") UUID studentId,
             @RequestBody StudentDemographicsDTO studentDemographicsDTO) throws Exception {
@@ -24,6 +26,7 @@ public class DemographicsController {
     }
 
     @GetMapping("{studentId}")
+    @PreAuthorize("HasRole('STUDENT')")
     public ResponseEntity<StudentDemographics> findDemographicsByStudentId(@PathVariable UUID studentId) throws Exception {
       return ResponseEntity.ok(studentDemographicsService.findDemographicsById(studentId));
     }
