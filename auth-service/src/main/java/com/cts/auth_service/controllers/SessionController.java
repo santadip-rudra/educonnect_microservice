@@ -24,11 +24,6 @@ public class SessionController {
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
 
-    @GetMapping("test")
-    public String test(){
-        return "hello";
-    }
-
     @GetMapping("refresh")
     public ResponseEntity<AuthResponseDto> refreshSession(
             @RequestHeader("X-Refresh-Token") String refreshToken) throws Exception {

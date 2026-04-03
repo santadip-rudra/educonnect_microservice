@@ -9,9 +9,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableFeignClients
 @EnableMethodSecurity
 public class AssessmentServiceApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(AssessmentServiceApplication.class, args);
 	}
-
 }
