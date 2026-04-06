@@ -1,6 +1,7 @@
 package com.ctx.student_registry_service.controller;
 
 import com.ctx.student_registry_service.dto.document.DocStreamDto;
+import com.ctx.student_registry_service.exceptions.custom.StudentNotFoundException;
 import com.ctx.student_registry_service.models.StudentDocument;
 import com.ctx.student_registry_service.models.enums.DocTypeEnum;
 import com.ctx.student_registry_service.services.StudentDoctypeService;
@@ -51,7 +52,7 @@ public class DocumentController {
             @RequestParam MultipartFile file,
             @RequestParam DocTypeEnum docType,
            @RequestHeader("X-User-Id") UUID userId
-    ) throws IOException {
+    ) throws IOException, StudentNotFoundException {
 
         return ResponseEntity.ok(
                 studentDocumentService.saveStudentDocument(userId, file,docType)

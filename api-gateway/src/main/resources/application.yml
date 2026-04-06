@@ -40,7 +40,7 @@ spring:
         - id: student_registry_service
           uri: lb://student-registry-service
           predicates:
-            - Path=/demographics/** , /v2/api/docs/**
+            - Path=/demographics/** , /v2/api/docs/**, /v2/api/attendance/**
           filters:
             - name: RateLimiter
               args:

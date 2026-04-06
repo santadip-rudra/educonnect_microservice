@@ -3,6 +3,7 @@ package com.ctx.student_registry_service.services;
 import com.ctx.student_registry_service.client.StudentClient;
 import com.ctx.student_registry_service.dto.document.DocStreamDto;
 import com.ctx.student_registry_service.dto.student.StudentResponse;
+import com.ctx.student_registry_service.exceptions.custom.StudentNotFoundException;
 import com.ctx.student_registry_service.models.StudentDocument;
 import com.ctx.student_registry_service.models.enums.FileTypeEnum;
 import  com.ctx.student_registry_service.models.DocType;
@@ -43,13 +44,14 @@ public class StudentDoctypeService {
             ));
 
 
-    public String saveStudentDocument(UUID studentUuid, MultipartFile file, DocTypeEnum docTypeEnum) throws IOException {
+    public String saveStudentDocument(UUID studentUuid, MultipartFile file, DocTypeEnum docTypeEnum) throws IOException, StudentNotFoundException {
 
         if(file == null || file.isEmpty()){
             throw new RuntimeException("file not found");
         }
 
-        StudentResponse student = studentClient.findByStudentId(studentUuid);
+        StudentResponse student = studentClient.findByStudentId(studentUuid)
+                .orElseThrow(()-> new StudentNotFoundException(studentUuid+ " not found"));
         StudentDocument document = new StudentDocument();
 
         document.setStudentId(student.getStudentId());
