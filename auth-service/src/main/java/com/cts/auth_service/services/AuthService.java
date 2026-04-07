@@ -54,7 +54,12 @@ public class AuthService {
         );
 
         //logging
-        auditLogClient.createAudit(user.getUserId(), Action.CREATE,user.getRole().name());
+        try{
+            auditLogClient.createAudit(user.getUserId(), Action.CREATE,user.getRole().name());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
 
         return  AuthResponseDto.builder()
                 .message(data.get("message"))
