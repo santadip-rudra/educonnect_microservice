@@ -5,6 +5,7 @@ import com.ctx.course_service.dto.CourseRequestDTO;
 import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleRequestDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
+import com.ctx.course_service.dto.common.GenericResponse;
 import com.ctx.course_service.dto.teacher.TeacherResponse;
 import com.ctx.course_service.dto.user.CurrentUser;
 import com.ctx.course_service.exceptions.custom_exceptions.UserIdDonotMatchException;
@@ -24,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ws.schild.jave.EncoderException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -142,11 +144,16 @@ public class CourseController {
         );
     }
 
-    @GetMapping("/get-courses/{teacherId}")
-
-    public ResponseEntity<?> getCoursesByTeacher(@RequestParam("teacherId") UUID teacherId){
+    @GetMapping("/get-all-courses/{teacherId}")
+    @PreAuthorize("hasRole('TEACHER') OR hasRole('STUDENT') OR hasRole('ADMIN')")
+    public ResponseEntity<?> getCoursesByTeacher(@PathVariable("teacherId") UUID teacherId){
         return  ResponseEntity.ok(
-                courseService.getCoursesByTeacherId(teacherId)
+                new GenericResponse<>(
+                        courseService.getCoursesByTeacherId(teacherId),
+                        "Retrieved courses successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
         );
     }
 }
