@@ -1,5 +1,6 @@
 package com.cts.auth_service.services;
 
+import com.cts.auth_service.client.AuditLogClient;
 import com.cts.auth_service.client.UserManagementServiceClient;
 import com.cts.auth_service.dto.AuthRegisterRequest;
 import com.cts.auth_service.dto.AuthRequestDto;
@@ -7,6 +8,7 @@ import com.cts.auth_service.dto.AuthResponseDto;
 import com.cts.auth_service.exceptions.custom.UserAlreadyExistsException;
 import com.cts.auth_service.exceptions.custom.UserNotAuthenticatedException;
 import com.cts.auth_service.exceptions.custom.UserNotFoundException;
+import com.cts.auth_service.models.Action;
 import com.cts.auth_service.models.RefreshToken;
 import com.cts.auth_service.models.Role;
 import com.cts.auth_service.models.User;
@@ -33,6 +35,7 @@ public class AuthService {
 
 
     private final UserManagementServiceClient userManagementServiceClient;
+    private final AuditLogClient auditLogClient;
 
 
     public AuthResponseDto register(AuthRequestDto requestDto) throws UserAlreadyExistsException {
@@ -49,6 +52,9 @@ public class AuthService {
         var data = userManagementServiceClient.register(
                 new AuthRegisterRequest(user.getUsername(),user.getUserId(),user.getRole().toString())
         );
+
+        //logging
+        auditLogClient.createAudit(user.getUserId(), Action.CREATE,user.getRole().name());
 
         return  AuthResponseDto.builder()
                 .message(data.get("message"))
@@ -67,6 +73,13 @@ public class AuthService {
             User entity = userRepo.findByUsername(requestDto.getUsername())
                     .orElseThrow(()-> new UsernameNotFoundException("User not found"));
             String jwtToken = jwtService.generateToken(entity);
+            try{
+                auditLogClient.createAudit(entity.getUserId(), Action.LOGIN,entity.getRole().name());
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+
             return  AuthResponseDto.builder()
                     .accessToken(jwtToken)
                     .refreshToken(refreshTokenService.createToken(entity.getUserId()).getToken())

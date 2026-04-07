@@ -83,6 +83,11 @@ spring:
                 routeId: assessment_attachment
 
 
+        - id: audit_log_service
+          uri: lb://audit-log-service
+          predicates:
+              - Path=/v2/api/audit/**
+
         - id: assessment_service
           uri: lb://assessment-service
           predicates:
@@ -96,6 +101,8 @@ spring:
               args:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
+
+
 
 
 
