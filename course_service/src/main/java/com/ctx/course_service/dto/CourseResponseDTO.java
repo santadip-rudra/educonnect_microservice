@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record CourseResponseDTO (
-     @NotBlank   UUID courseId,
+        @NotBlank   UUID courseId,
     @NotBlank
     String title,
     @NotBlank String description,

@@ -1,5 +1,6 @@
 package com.ctx.course_service.service.contract;
 
+import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.exceptions.custom_exceptions.UserIdDonotMatchException;
 import com.ctx.course_service.model.Course;
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ws.schild.jave.EncoderException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 public interface CourseModuleInterface {
@@ -27,4 +29,6 @@ public interface CourseModuleInterface {
 
     String deleteModuleById(UUID moduleId, UUID courseId, UUID userId)
             throws IOException, UserIdDonotMatchException;
+
+
 }

@@ -1,4 +1,5 @@
 package com.ctx.course_service.service.implementation;
+import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.exceptions.custom_exceptions.FileException;
 import com.ctx.course_service.exceptions.custom_exceptions.ModuleNotFoundException;
@@ -29,6 +30,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -317,4 +320,6 @@ public class CourseModuleImpl implements CourseModuleInterface {
 
         return deleteModule(course, module);
     }
+
+
 }
