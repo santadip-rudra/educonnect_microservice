@@ -141,4 +141,12 @@ public class CourseController {
                 HttpStatus.OK
         );
     }
+
+    @GetMapping("/get-courses/{teacherId}")
+
+    public ResponseEntity<?> getCoursesByTeacher(@RequestParam("teacherId") UUID teacherId){
+        return  ResponseEntity.ok(
+                courseService.getCoursesByTeacherId(teacherId)
+        );
+    }
 }
