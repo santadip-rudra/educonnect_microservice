@@ -23,7 +23,10 @@ public class SecurityConfig {
         return  security
                 .csrf(csrf->csrf.disable())
                 .authorizeHttpRequests(auth->
-                        auth.anyRequest().authenticated())
+                        auth
+                                .requestMatchers("/error").permitAll()
+                                .anyRequest().authenticated()
+                )
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(headerFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(login->login.disable())

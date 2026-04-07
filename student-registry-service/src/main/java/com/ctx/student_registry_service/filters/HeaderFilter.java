@@ -24,7 +24,7 @@ public class HeaderFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
 
         String userId = request.getHeader("X-User-Id");
-        String role = request.getHeader("X-User-role");
+        String role = request.getHeader("X-User-Role");
         String username = request.getHeader("X-User-username");
         if (
                 userId != null
