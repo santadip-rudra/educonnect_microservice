@@ -7,12 +7,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @FeignClient(name = "user-management-service", url = "localhost:8081/student")
 public interface StudentClient {
     @GetMapping("{studentId}")
-    StudentResponse findByStudentId(@PathVariable UUID studentId);
+    Optional<StudentResponse> findByStudentId(@PathVariable UUID studentId);
 
     @GetMapping("exists")
     Map<String,Object> existsBystudentId(@RequestParam UUID studentId);

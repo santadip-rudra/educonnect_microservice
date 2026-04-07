@@ -22,8 +22,9 @@ public class StudentDemographicsService {
     private final StudentClient studentClient;
     private final DemographicsMapper demographicsMapper;
 
-    public StudentResponse findStudentById(UUID studentId){
-        return studentClient.findByStudentId(studentId);
+    public StudentResponse findStudentById(UUID studentId) throws StudentNotFoundException {
+        return studentClient.findByStudentId(studentId)
+                .orElseThrow(()-> new StudentNotFoundException(studentId+ " not found"));
     }
 
     public StudentDemographics createDemoGraphics(UUID studentId,
