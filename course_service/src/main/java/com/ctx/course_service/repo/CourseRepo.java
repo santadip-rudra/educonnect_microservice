@@ -12,8 +12,10 @@ import java.util.UUID;
 @Repository
 public interface CourseRepo extends JpaRepository<Course, UUID> {
 
-    @Query("SELECT c FROM Course c " +
-            "JOIN FETCH c.modules " +
-            "WHERE c.teacherId = :teacherId")
+    @Query("""
+            SELECT c FROM Course c
+            LEFT JOIN FETCH c.modules m
+            WHERE c.teacherId = :teacherId
+            """)
     List<Course> findAllCoursesByTeacherId(@Param("teacherId") UUID teacherId);
 }

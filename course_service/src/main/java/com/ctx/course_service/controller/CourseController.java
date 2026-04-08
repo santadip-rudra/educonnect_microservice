@@ -45,10 +45,7 @@ public class CourseController {
             @RequestBody CourseRequestDTO course,
             @AuthenticationPrincipal CurrentUser user) throws Exception {
 
-        TeacherResponse t = client.getTeacherById(user.getUserId())
-                .orElseThrow(() -> new Exception("Teacher not found"));
-
-        return ResponseEntity.ok(courseService.addCourse(course, t.getTeacherId()));
+        return ResponseEntity.ok(courseService.addCourse(course, user.getUserId()));
     }
 
     @PostMapping("/add-module")
