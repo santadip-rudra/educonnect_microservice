@@ -89,8 +89,7 @@ public class JwtService {
                     .build();
 
         } catch (Exception e) {
-            // This catches SignatureException, MalformedJwtException, etc.
-            return null;
+            throw  new RuntimeException(e.getMessage());
         }
     }
 
