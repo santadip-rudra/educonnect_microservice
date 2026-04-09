@@ -45,10 +45,7 @@ public class CourseController {
             @RequestBody CourseRequestDTO course,
             @AuthenticationPrincipal CurrentUser user) throws Exception {
 
-        TeacherResponse t = client.getTeacherById(user.getUserId())
-                .orElseThrow(() -> new Exception("Teacher not found"));
-
-        return ResponseEntity.ok(courseService.addCourse(course, t.getTeacherId()));
+        return ResponseEntity.ok(courseService.addCourse(course, user.getUserId()));
     }
 
     @PostMapping("/add-module")
@@ -145,7 +142,7 @@ public class CourseController {
     }
 
     @GetMapping("/get-all-courses/{teacherId}")
-    @PreAuthorize("hasRole('TEACHER') OR hasRole('STUDENT') OR hasRole('ADMIN')")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN') or hasRole('STUDENT')")
     public ResponseEntity<?> getCoursesByTeacher(@PathVariable("teacherId") UUID teacherId){
         return  ResponseEntity.ok(
                 new GenericResponse<>(
