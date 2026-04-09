@@ -142,7 +142,7 @@ public class CourseController {
     }
 
     @GetMapping("/get-all-courses/{teacherId}")
-    @PreAuthorize("hasRole('TEACHER') OR hasRole('STUDENT') OR hasRole('ADMIN')")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN') or hasRole('STUDENT')")
     public ResponseEntity<?> getCoursesByTeacher(@PathVariable("teacherId") UUID teacherId){
         return  ResponseEntity.ok(
                 new GenericResponse<>(

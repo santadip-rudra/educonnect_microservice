@@ -15,6 +15,7 @@ public interface CourseRepo extends JpaRepository<Course, UUID> {
     @Query("""
             SELECT c FROM Course c
             LEFT JOIN FETCH c.modules m
+            LEFT JOIN FETCH c.enrollments e
             WHERE c.teacherId = :teacherId
             """)
     List<Course> findAllCoursesByTeacherId(@Param("teacherId") UUID teacherId);

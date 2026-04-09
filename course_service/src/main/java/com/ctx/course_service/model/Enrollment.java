@@ -1,21 +1,24 @@
 package com.ctx.course_service.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.util.UUID;
 @Builder
 @Entity
 @Data
+@ToString(exclude = "course")
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(uniqueConstraints = {
         @UniqueConstraint(columnNames = {"student_id", "course_id"})
 })
+@EntityListeners(AuditingEntityListener.class)
 public class Enrollment {
 
     @Id
@@ -27,8 +30,8 @@ public class Enrollment {
 
     @ManyToOne
     @JoinColumn(name = "course_id")
+    @JsonIgnore
     private Course course;
-
 
     private boolean isActive = true;
 
@@ -37,4 +40,7 @@ public class Enrollment {
     private Double progress;
 
     private Double finalGrade;
+
+    @CreatedDate
+    private LocalDate enrolledDate;
 }
