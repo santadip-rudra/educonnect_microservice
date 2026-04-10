@@ -8,6 +8,7 @@ import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.dto.teacher.TeacherResponse;
 import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
+import com.ctx.course_service.service.contract.CourseModuleInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Component
 public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResponseDTO>{
+
+    private final CourseModuleInterface courseModuleInterface;
 
     @Override
     public Course toEntity(CourseRequestDTO requestDTO) {
@@ -52,6 +55,8 @@ public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResp
                 ,courseModule.getModuleId(),
                 courseModule.getTitle()
                 ,courseModule.getDuration(),
-                courseModule.getSequenceOrder());
+                courseModule.getSequenceOrder(),
+                courseModuleInterface.getModuleUrl(courseModule.getModuleId())
+                );
     }
 }
