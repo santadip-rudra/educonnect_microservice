@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -72,7 +73,7 @@ public class AssessmentController {
         );
     }
 
-    @PatchMapping("/question/{questionId}/image")
+    @PatchMapping(value = "/question/{questionId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> uploadQuestionImage(
             @PathVariable String questionId,
@@ -85,7 +86,7 @@ public class AssessmentController {
         );
     }
 
-    @PatchMapping("/option/{optionId}/image")
+    @PatchMapping(value = "/option/{optionId}/image",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> uploadOptionImage(
             @PathVariable String optionId,
@@ -98,6 +99,7 @@ public class AssessmentController {
     }
 
     @GetMapping("/quiz/view/{type}/image/{id}")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT') or hasRole('ADMIN')")
     public void viewImage(
         @PathVariable("type") String type,
         @PathVariable("id") UUID id,
