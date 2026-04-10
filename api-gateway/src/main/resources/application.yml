@@ -22,6 +22,20 @@ spring:
   # --- Gateway Routing ---
   cloud:
     gateway:
+      # FIX: Global CORS must be a direct child of 'gateway', not inside 'routes'
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+
       routes:
         - id: user_management_service
           uri: lb://user-management-service

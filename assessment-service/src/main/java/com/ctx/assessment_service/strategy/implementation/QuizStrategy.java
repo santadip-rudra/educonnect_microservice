@@ -1,6 +1,6 @@
 package com.ctx.assessment_service.strategy.implementation;
 
-import com.ctx.assessment_service.client.CourseClient;
+import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
 import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.create.quiz.CreateQuizRequestDTO;
@@ -10,23 +10,25 @@ import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.report.quiz.StudentQuestionAttemptDTO;
 import com.ctx.assessment_service.dto.assessment.report.quiz.StudentQuizReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
+import com.ctx.assessment_service.dto.assessment.serve.quiz.QuestionOptionServeDTO;
+import com.ctx.assessment_service.dto.assessment.serve.quiz.QuizQuestionServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.quiz.QuizServeDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.quiz.StudentQuestionAndAnswerDTO;
 import com.ctx.assessment_service.dto.assessment.submit.quiz.StudentQuizQuestionResponseDTO;
-import com.ctx.assessment_service.dto.course.CourseDTO;
+import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
 import com.ctx.assessment_service.model.*;
 import com.ctx.assessment_service.model.enums.AssessmentType;
 import com.ctx.assessment_service.repo.assessment.AssessmentRepo;
 import com.ctx.assessment_service.repo.assessment.SubmissionRepo;
-import com.ctx.assessment_service.repo.assessment.assignment.AssignmentRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.QuestionOptionRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.QuestionRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.QuizRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.StudentQuizQuestionResponseRepo;
-import com.ctx.assessment_service.service.contract.ResultService;
+import com.ctx.assessment_service.service.contract.image.ImageService;
+import com.ctx.assessment_service.service.contract.result.ResultService;
 import com.ctx.assessment_service.strategy.contract.AssessmentStrategy;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -55,11 +57,12 @@ public class QuizStrategy implements AssessmentStrategy {
     private final SubmissionRepo submissionRepo;
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
     private final ResultService resultService;
+    private final ImageService imageService;
     // private final EnrollmentRepo enrollmentRepo;
-    private final AssignmentRepo assignmentRepo;
 
-    private final CourseClient courseClient;
+    private final CourseServiceClient courseServiceClient;
     private final UserManagementServiceClient userManagementServiceClient;
+
 
     @Override
     public boolean supports(AssessmentType type) {
@@ -71,13 +74,13 @@ public class QuizStrategy implements AssessmentStrategy {
     @Transactional
     public Map<String,String> createAssessment(CurrentUser teacher, CreateAssessmentRequestDTO assessmentRequestDTO) throws BadRequestException {
 
-        CourseDTO course = courseClient.getCourseById(assessmentRequestDTO.getCourseId());
+        CourseResponse course = courseServiceClient.getcourse(assessmentRequestDTO.getCourseId());
 
         if(course == null){
             throw new ResourceNotFoundException("Course not found");
         }
 
-        if(!canCreateAssessment(teacher.getUserId(),course.getCourseId())){
+        if(!canCreateAssessment(teacher.getUserId(),course.getTeacherId())){
             throw new BadRequestException("Teacher " + teacher.getUsername() +" can't add assessment to this course " + course.getTitle());
         }
 
@@ -86,7 +89,6 @@ public class QuizStrategy implements AssessmentStrategy {
                         .maxScore(assessmentRequestDTO.getMaxScore())
                         .title(assessmentRequestDTO.getTitle())
                         .type(assessmentRequestDTO.getAssessmentType())
-//                        .noOfStudentSubmitted(0)
                         .courseId(course.getCourseId())
                         .build();
 
@@ -143,15 +145,22 @@ public class QuizStrategy implements AssessmentStrategy {
 
     @Override
     public AssessmentServeDTO serveAssessment(UUID assessmentId, CurrentUser user) throws BadRequestException {
+
+        if (user.getRole().equals("STUDENT") &&
+                submissionRepo.existsByStudentIdAndAssessmentAssessmentId(
+                user.getUserId(), assessmentId
+                )) {
+            throw new BadRequestException("Student `" + user.getUsername()
+                    + "` has already already attempted the Quiz");
+        }
+
         Quiz quiz = quizRepo.findQuizWithQuestionAndOptions(assessmentId)
                 .orElseThrow(()-> new ResourceNotFoundException("Quiz not found"));
 
-        Assessment assessment = assessmentRepo.findById(assessmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
-
+        Assessment assessment = quiz.getAssessment();
 
         if(user.getRole().equals("STUDENT") &&
-                !userManagementServiceClient.isStudentEnrolled(user.getUserId(),assessment.getCourseId())){
+                !courseServiceClient.isStudentEnrolled(user.getUserId(),assessment.getCourseId()).getData()){
             throw new BadRequestException("Student `" + user.getUsername() + "` did not enroll to the course" );
         }
 
@@ -162,33 +171,43 @@ public class QuizStrategy implements AssessmentStrategy {
         if (quiz == null) {
             return null;
         }
-        List<com.ctx.assessment_service.dto.assessment.serve.quiz.QuizQuestionDTO> questionDTOs = quiz.getQuestionList().stream()
+        List<QuizQuestionServeDTO> questionDTOs = quiz.getQuestionList().stream()
                 .map(question -> {
-                    com.ctx.assessment_service.dto.assessment.serve.quiz.QuizQuestionDTO qDto
-                            = new com.ctx.assessment_service.dto.assessment.serve.quiz.QuizQuestionDTO();
+                    QuizQuestionServeDTO qDto
+                            = new QuizQuestionServeDTO();
                     qDto.setQuizQuestionId(question.getQuestionId());
                     qDto.setQuestionText(question.getQuestionText());
+                    qDto.setImageUri(
+                            question.getHasImage() == null? null :
+                            imageService.generateImageUri("question",question.getQuestionId())
+                    );
 
                     if (question.getQuestionOptionList() != null) {
 
-                        List<com.ctx.assessment_service.dto.assessment.serve.quiz.QuestionOptionDTO> optionDTOs = question.getQuestionOptionList()
+                        List<QuestionOptionServeDTO> optionDTOs = question.getQuestionOptionList()
                                 .stream()
                                 .map(option -> {
-                                    com.ctx.assessment_service.dto.assessment.serve.quiz.QuestionOptionDTO oDto = new com.ctx.assessment_service.dto.assessment.serve.quiz.QuestionOptionDTO();
+                                    QuestionOptionServeDTO oDto = new QuestionOptionServeDTO();
                                     oDto.setQuestionOptionId(option.getQuestionOptionId());
                                     oDto.setOptionText(option.getOptionText());
+                                    oDto.setImageUri(
+                                            option.getHasImage() == null?
+                                                    null :
+                                            imageService.generateImageUri("option",option.getQuestionOptionId())
+
+                                    );
                                     return oDto;
                                 })
                                 .toList();
-                        qDto.setQuestionOptionDTOList(optionDTOs);
+                        qDto.setQuestionOptionServeDTOList(optionDTOs);
                     }
                     return qDto;
                 })
                 .toList();
         QuizServeDTO quizServeDTO = new QuizServeDTO(quiz.getQuizId(), questionDTOs);
 
-        ((AssessmentServeDTO)quizServeDTO).setAssessmentType(AssessmentType.QUIZ);
-        ((AssessmentServeDTO)quizServeDTO).setTitle(quiz.getAssessment().getTitle());
+        quizServeDTO.setAssessmentType(AssessmentType.QUIZ);
+        quizServeDTO.setTitle(quiz.getAssessment().getTitle());
 
         return quizServeDTO;
     }
@@ -203,12 +222,11 @@ public class QuizStrategy implements AssessmentStrategy {
             throw new ResourceNotFoundException("Student response not found");
         }
 
-        if(user.getRole().equals("STUDENT")
-                && !studentResponseList.getFirst().getSubmission().getStudentId().equals(user.getUserId())
-        ){
-            throw new BadRequestException("Student " + user.getUsername()
-                    + " is not authorized to access this report");
-        }
+        if (!studentResponseList.get(0).getSubmission().getStudentId().equals(user.getUserId()))
+            if (user.getRole().equals("STUDENT")) {
+                throw new BadRequestException("Student " + user.getUsername()
+                        + " is not authorized to access this report");
+            }
 
 
         StudentQuizReportDTO studentQuizReportDTO = new StudentQuizReportDTO();
@@ -221,8 +239,8 @@ public class QuizStrategy implements AssessmentStrategy {
         studentQuizReportDTO.setStudentQuestionAttemptDTOList(studentQuestionAttemptDTO);
         studentQuizReportDTO.setSubmissionId(submissionId);
 
-        ((AssessmentReportDTO)studentQuizReportDTO).setAssessmentType(AssessmentType.QUIZ);
-        ((AssessmentReportDTO)studentQuizReportDTO).setTitle(studentResponseList.getFirst().getSubmission().getAssessment().getTitle());
+        studentQuizReportDTO.setAssessmentType(AssessmentType.QUIZ);
+        studentQuizReportDTO.setTitle(studentResponseList.get(0).getSubmission().getAssessment().getTitle());
         return studentQuizReportDTO;
     }
 
@@ -263,22 +281,22 @@ public class QuizStrategy implements AssessmentStrategy {
         Assessment assessment = assessmentRepo.findById(dto.getAssessmentId())
                 .orElseThrow(()-> new ResourceNotFoundException("Assessment not found"));
 
-
-        if(userManagementServiceClient.isStudentEnrolled(student.getUserId(),assessment.getCourseId())){
+        if(!courseServiceClient.isStudentEnrolled(student.getUserId(),assessment.getCourseId()).getData()){
             throw new BadRequestException("Student with id `" + student.getUserId() + "` did not enroll to the course" );
         }
 
-        if(submissionRepo.existsByStudentIdAndAssessmentId(student.getUserId(),assessment.getAssessmentId())){
+        if(submissionRepo.existsByStudentIdAndAssessmentAssessmentId(student.getUserId(),assessment.getAssessmentId())){
             throw new BadRequestException(
                     "Student: `" + student.getUsername() + " already submitted the course"
             );
         }
 
-
-
         Quiz quiz = quizRepo.findById(dto.getQuizId())
                 .orElseThrow(()-> new ResourceNotFoundException("Quiz not found"));
 
+        if(!quiz.getAssessment().getAssessmentId().equals(assessment.getAssessmentId())){
+            throw new BadRequestException("Quiz does not belong to the given assessment");
+        }
 
         Submission submission =
                 Submission.builder()
@@ -305,6 +323,10 @@ public class QuizStrategy implements AssessmentStrategy {
             QuestionOption questionOption = questionOptionRepo.findById(studentQuestionAndAnswerDTO.getQuestionOptionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Option not found not found!"));
 
+            if(!questionOption.getQuestion().getQuestionId().equals(question.getQuestionId())){
+                throw new BadRequestException("Option does not belong to the given question");
+            }
+
             studentQuizQuestionResponse.setQuestion(question);
             studentQuizQuestionResponse.setQuestionOption(questionOption);
 
@@ -315,6 +337,7 @@ public class QuizStrategy implements AssessmentStrategy {
         }
 
         submission.setSubmissionStatus(SubmissionStatus.SUBMITTED);
+        submissionRepo.save(submission);
 
         studentQuizQuestionResponseRepo.saveAll(studentQuizQuestionResponseList);
 

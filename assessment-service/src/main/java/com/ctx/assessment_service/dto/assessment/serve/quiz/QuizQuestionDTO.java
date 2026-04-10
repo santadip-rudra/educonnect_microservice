@@ -6,8 +6,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Data
-public class QuizQuestionDTO {
+public class QuizQuestionServeDTO {
     private UUID quizQuestionId;
     private String questionText;
-    private List<QuestionOptionDTO> questionOptionDTOList;
+    private String imageUri;
+    private List<QuestionOptionServeDTO> questionOptionServeDTOList;
 }

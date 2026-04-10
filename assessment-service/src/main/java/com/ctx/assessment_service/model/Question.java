@@ -31,5 +31,17 @@ public class Question {
     @OneToMany(mappedBy = "question")
     private List<StudentQuizQuestionResponse> studentQuizQuestionResponseList;
 
+    @Lob
+    @Column(nullable = true, columnDefinition = "LONGBLOB")
+    @Basic(fetch = FetchType.LAZY)
+    private byte[] imageBinData;
+
+    private Boolean hasImage = false;
+
+    @Column(nullable = true)
+    private String imageContentType;
+
+    @Column(nullable = true)
+    private String imageFileName;
 
 }
