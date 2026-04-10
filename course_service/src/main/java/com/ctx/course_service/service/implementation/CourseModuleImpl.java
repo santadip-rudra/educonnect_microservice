@@ -146,7 +146,9 @@ public class CourseModuleImpl implements CourseModuleInterface {
                     savedModule.getModuleId(),
                     savedModule.getTitle(),
                     savedModule.getDuration(),
-                    savedModule.getSequenceOrder()
+                    savedModule.getSequenceOrder(),
+                    getModuleUrl(savedModule.getModuleId())
+
             );
 
         } catch (Exception e) {

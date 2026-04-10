@@ -7,7 +7,8 @@ public record  ModuleResponseDTO (
        UUID moduleId,
        String title,
        Double duration,
-       Integer sequenceOrder
+       Integer sequenceOrder,
+       String moduleUri
 
 ){
 }

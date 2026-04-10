@@ -45,7 +45,9 @@ public class CourseController {
             @RequestBody CourseRequestDTO course,
             @AuthenticationPrincipal CurrentUser user) throws Exception {
 
-        return ResponseEntity.ok(courseService.addCourse(course, user.getUserId()));
+        TeacherResponse t = client.getTeacherById(user.getUserId())
+                .orElseThrow(() -> new Exception("Teacher not found"));
+        return ResponseEntity.ok(courseService.addCourse(course, t.getTeacherId()));
     }
 
     @PostMapping("/add-module")
@@ -132,11 +134,11 @@ public class CourseController {
         return ResponseEntity.ok(courseService.getByIdCourse(courseId));
     }
 
-    @GetMapping("/modules")
+    @GetMapping("/modules/{courseId}")
     public ResponseEntity<List<ModuleResponseDTO>> getAllModulesOfCourse(
-            @RequestBody ModuleRequestDTO requestDTO) {
+            @PathVariable  UUID courseId) {
         return new ResponseEntity<>(
-                courseService.getAllModulesOfACourse(requestDTO.courseId()),
+                courseService.getAllModulesOfACourse(courseId),
                 HttpStatus.OK
         );
     }
