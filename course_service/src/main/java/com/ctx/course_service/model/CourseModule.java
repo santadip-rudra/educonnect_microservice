@@ -11,7 +11,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @Data
-@ToString
+@ToString(exclude = "course")
 @Table(
         uniqueConstraints = {
                 @UniqueConstraint(

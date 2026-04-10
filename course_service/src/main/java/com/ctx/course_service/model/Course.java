@@ -1,15 +1,17 @@
 package com.ctx.course_service.model;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-@Entity
+
 @Data
+@Entity
+@Getter
+@Setter
+@EqualsAndHashCode(exclude = {"modules", "enrollments"})
+@ToString(exclude = {"modules", "enrollments"})
 public class Course {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -27,10 +29,11 @@ public class Course {
     private Double duration;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<CourseModule> modules = new ArrayList<>();;
+    private Set<CourseModule> modules = new HashSet<>();;
 
     @OneToMany(mappedBy = "course")
-    private List<Enrollment> enrollments = new ArrayList<>();;
+
+    private Set<Enrollment> enrollments = new HashSet<>();;
 
 //    @OneToMany(mappedBy = "course")
 //    @ToString.Exclude
