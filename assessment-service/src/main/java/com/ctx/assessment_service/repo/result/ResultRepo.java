@@ -12,4 +12,6 @@ public interface ResultRepo extends JpaRepository<Result, UUID> {
     Optional<Result> findByAssessmentAssessmentId(UUID assessmentId);
     Optional<Result> findBySubmissionSubmissionId(UUID submissionId);
     boolean existsByAssessmentAssessmentId(UUID assessmentId);
+    boolean existsByAssessmentAssessmentIdAndStudentId(UUID assessmentId, UUID studentId);
+    Optional<Result> findByAssessmentAssessmentIdAndStudentId(UUID assessmentId, UUID studentId);
 }

@@ -29,8 +29,7 @@ public class ParentManagementController
     }
 
     @PostMapping
-    public  ResponseEntity<ParentResponse> updateParent(@RequestBody ParentUpdateRequest request,
-                                                        @RequestHeader("X-User-Id") UUID parentId){
+    public  ResponseEntity<ParentResponse> updateParent(@RequestBody ParentUpdateRequest request, @RequestHeader("X-User-Id") UUID parentId){
         return ResponseEntity.ok(parentService.updateParent(parentId,request));
     }
 }

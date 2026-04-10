@@ -12,9 +12,9 @@ import java.util.UUID;
 @Repository
 public interface SubmissionRepo extends JpaRepository<Submission, UUID> {
 
-    Optional<Submission> findByStudentIdAndAssessmentId(UUID studentId, UUID assessmentId);
+    Optional<Submission> findByStudentIdAndAssessmentAssessmentId(UUID studentId, UUID assessmentId);
 
-    boolean existsByStudentIdAndAssessmentId(UUID studentId, UUID assessmentId);
+    boolean existsByStudentIdAndAssessmentAssessmentId(UUID studentId, UUID assessmentId);
 
     @Query(
             """

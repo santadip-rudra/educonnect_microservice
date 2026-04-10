@@ -46,8 +46,12 @@ public class StudentService {
         return mapper.toResponseDtos(studentRepo.findAll());
     }
     
-    public  StudentResponse findByStudentId(UUID studentId){
+    public  StudentResponse findByStudentId(UUID studentId) throws UserNotFoundException{
         return studentRepo.findByStudentId(studentId)
-                .map(mapper::toResponseDTO).orElseThrow();
+                .map(mapper::toResponseDTO).orElseThrow(()-> new UserNotFoundException("Student does not Exist"));
+    }
+
+    public  Boolean exists(UUID studentId){
+        return studentRepo.existsById(studentId);
     }
 }

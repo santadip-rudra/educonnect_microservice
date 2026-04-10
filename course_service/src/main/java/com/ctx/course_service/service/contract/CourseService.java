@@ -15,4 +15,6 @@ public interface CourseService{
     public CourseResponseDTO getByIdCourse(UUID id) throws Exception;
     public String deleteById(UUID id);
 List<ModuleResponseDTO> getAllModulesOfACourse(UUID courseId );
+
+    List<CourseResponseDTO> getCoursesByTeacherId(UUID id);
 }

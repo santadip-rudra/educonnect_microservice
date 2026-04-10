@@ -29,7 +29,6 @@ public class TeacherManagementController {
             @RequestBody TeacherUpdateRequest request) throws UserNotFoundException {
         return ResponseEntity.ok(teacherService.update(id, request));
     }
-
     /**
      * Retrieves a list of all teachers.
      */

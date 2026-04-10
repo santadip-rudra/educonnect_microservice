@@ -1,12 +1,20 @@
 package com.cts.auth_service.services;
 
+import com.cts.auth_service.client.AuditLogClient;
+import com.cts.auth_service.client.UserManagementServiceClient;
+import com.cts.auth_service.dto.AuthRegisterRequest;
 import com.cts.auth_service.dto.AuthRequestDto;
 import com.cts.auth_service.dto.AuthResponseDto;
+import com.cts.auth_service.exceptions.custom.UserAlreadyExistsException;
 import com.cts.auth_service.exceptions.custom.UserNotAuthenticatedException;
+import com.cts.auth_service.exceptions.custom.UserNotFoundException;
+import com.cts.auth_service.models.Action;
+import com.cts.auth_service.models.RefreshToken;
 import com.cts.auth_service.models.Role;
 import com.cts.auth_service.models.User;
 import com.cts.auth_service.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,24 +31,43 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final AuthDetailsService authDetailsService;
+    private final RefreshTokenService refreshTokenService;
 
 
-    public AuthResponseDto register(AuthRequestDto requestDto){
-        userRepo.save(
+    private final UserManagementServiceClient userManagementServiceClient;
+    private final AuditLogClient auditLogClient;
+
+
+    public AuthResponseDto register(AuthRequestDto requestDto) throws UserAlreadyExistsException {
+        if(userRepo.existsByUsername(requestDto.getUsername())){
+            throw new UserAlreadyExistsException("User with username["+ requestDto.getUsername() +"] already exists");
+        }
+        User user = userRepo.save(
         User.builder()
                 .username(requestDto.getUsername())
                 .password(encoder.encode(requestDto.getPassword()))
                 .role(Role.valueOf(requestDto.getRole()))
                 .build());
 
+        var data = userManagementServiceClient.register(
+                new AuthRegisterRequest(user.getUsername(),user.getUserId(),user.getRole().toString())
+        );
+
+        //logging
+        try{
+            auditLogClient.createAudit(user.getUserId(), Action.CREATE,user.getRole().name());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+
         return  AuthResponseDto.builder()
-                .message("registered succesfully")
+                .message(data.get("message"))
                 .status(true)
                 .build();
     }
 
-    public  AuthResponseDto login(AuthRequestDto requestDto) throws UsernameNotFoundException, UserNotAuthenticatedException {
+    public  AuthResponseDto login(AuthRequestDto requestDto) throws Exception {
         Authentication authentication =
                 authenticationManager.authenticate( new UsernamePasswordAuthenticationToken(
                         requestDto.getUsername(),requestDto.getPassword()
@@ -51,9 +78,18 @@ public class AuthService {
             User entity = userRepo.findByUsername(requestDto.getUsername())
                     .orElseThrow(()-> new UsernameNotFoundException("User not found"));
             String jwtToken = jwtService.generateToken(entity);
+            try{
+                auditLogClient.createAudit(entity.getUserId(), Action.LOGIN,entity.getRole().name());
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+
             return  AuthResponseDto.builder()
-                    .token(jwtToken)
+                    .accessToken(jwtToken)
+                    .refreshToken(refreshTokenService.createToken(entity.getUserId()).getToken())
                     .message("success")
+                    .userId(entity.getUserId())
                     .status(true)
                     .build();
         }

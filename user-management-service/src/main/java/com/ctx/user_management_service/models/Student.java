@@ -26,6 +26,7 @@ public class Student {
     private String enrollmentNumber;
     private String parentEmail;
     private Boolean isActive;
+    private Boolean isVerified = false;
 
     public  Student(UUID id){
         this.setStudentId(id);

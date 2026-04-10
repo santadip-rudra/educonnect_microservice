@@ -1,9 +1,8 @@
 package com.ctx.assessment_service.model;
 
-import com.educonnect.model.user.Student;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
@@ -18,9 +17,8 @@ public class Result {
     @Column(nullable = false,updatable = false)
     private UUID resultId;
 
-    @ManyToOne
-    @JoinColumn(name = "student_id")
-    private Student student;
+    @Column(nullable = false,updatable = false)
+    private UUID studentId;
 
     @ManyToOne
     @JoinColumn(name = "assessment_id")
