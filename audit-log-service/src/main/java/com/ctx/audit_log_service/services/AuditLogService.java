@@ -6,7 +6,9 @@ import com.ctx.audit_log_service.repo.AuditLogRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,5 +37,11 @@ public class AuditLogService {
 
     public List<AuditLog> findAuditByResource(String resource, Integer from, Integer pageSize) throws Exception {
         return  auditLogRepo.findAllByResource(resource,PageRequest.of(from,pageSize)).stream().toList();
+    }
+
+    public  List<AuditLog> findAllAudits(@RequestParam Integer pageNumber){
+        Sort sort = Sort.by("timestamp").descending();
+        Pageable pageable = PageRequest.of(pageNumber,5,sort);
+        return  auditLogRepo.findAll(pageable).stream().toList();
     }
 }
