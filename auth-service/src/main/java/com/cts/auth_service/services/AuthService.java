@@ -89,6 +89,7 @@ public class AuthService {
                     .accessToken(jwtToken)
                     .refreshToken(refreshTokenService.createToken(entity.getUserId()).getToken())
                     .message("success")
+                    .role(entity.getRole().toString())
                     .userId(entity.getUserId())
                     .status(true)
                     .build();

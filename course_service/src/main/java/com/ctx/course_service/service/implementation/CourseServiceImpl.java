@@ -14,6 +14,7 @@ import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
+import com.ctx.course_service.service.contract.CourseModuleInterface;
 import com.ctx.course_service.service.contract.CourseService;
 import com.ctx.course_service.utils.mapper.CourseMapper;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,8 @@ public class CourseServiceImpl implements CourseService {
     private final CourseRepo courseRepo;
 
     private final CourseMapper courseMapper;
+
+    private final CourseModuleInterface courseModuleInterface;
 
     private final TeacherClient client;
 
@@ -142,7 +145,8 @@ public class CourseServiceImpl implements CourseService {
                         courseModule.getModuleId(),
                         courseModule.getTitle(),
                         courseModule.getDuration(),
-                        courseModule.getSequenceOrder()
+                        courseModule.getSequenceOrder(),
+                        courseModuleInterface.getModuleUrl(courseModule.getModuleId())
                 );
                 moduleResponseDTOList.add(moduleResponseDTO);
             }
