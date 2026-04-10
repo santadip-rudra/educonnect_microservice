@@ -142,6 +142,15 @@ public class QuizStrategy implements AssessmentStrategy {
 
     @Override
     public AssessmentServeDTO serveAssessment(UUID assessmentId, CurrentUser user) throws BadRequestException {
+
+        if (user.getRole().equals("STUDENT") &&
+                submissionRepo.existsByStudentIdAndAssessmentAssessmentId(
+                user.getUserId(), assessmentId
+                )) {
+            throw new BadRequestException("Student `" + user.getUsername()
+                    + "` has already already attempted the Quiz");
+        }
+
         Quiz quiz = quizRepo.findQuizWithQuestionAndOptions(assessmentId)
                 .orElseThrow(()-> new ResourceNotFoundException("Quiz not found"));
 

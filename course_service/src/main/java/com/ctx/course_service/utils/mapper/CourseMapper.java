@@ -12,6 +12,8 @@ import com.ctx.course_service.service.contract.CourseModuleInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -40,7 +42,9 @@ public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResp
                 entity.getCourseCode(),
                 entity.getDuration(),
                 entity.getTeacherId(),
-                module
+                module,
+                Collections.emptyList(),
+                Collections.emptyList()
         );
     }
 

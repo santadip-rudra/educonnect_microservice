@@ -1,13 +1,18 @@
 package com.ctx.course_service.service.implementation;
 
+import com.ctx.course_service.clientCall.AssessmentClient;
 import com.ctx.course_service.clientCall.TeacherClient;
 import com.ctx.course_service.dto.CourseRequestDTO;
 import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
+import com.ctx.course_service.dto.assessment.AssessmentResponseDTO;
+import com.ctx.course_service.dto.enrollment.EnrollmentResponseDTOServe;
+import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.exceptions.custom_exceptions.CourseNotFoundException;
 import com.ctx.course_service.exceptions.custom_exceptions.ResourceNotFoundException;
 import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
+import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
 import com.ctx.course_service.service.contract.CourseModuleInterface;
 import com.ctx.course_service.service.contract.CourseService;
@@ -39,6 +44,8 @@ public class CourseServiceImpl implements CourseService {
     private final CourseModuleInterface courseModuleInterface;
 
     private final TeacherClient client;
+
+    private final AssessmentClient assessmentClient;
 
     @Override
     public CourseResponseDTO addCourse(CourseRequestDTO request, UUID teacherId) {
@@ -122,6 +129,9 @@ public class CourseServiceImpl implements CourseService {
         if(courseList == null || courseList.isEmpty()){
             throw new ResourceNotFoundException("Courses not found");
         }
+        List<UUID> courseIdList = courseList.stream().map(Course::getCourseId).toList();
+
+        var allAssessmentResponseDTOList = assessmentClient.getAllAssessmentsByListOfCourseIds(courseIdList.stream().map(id->id.toString()).toList());
 
         List<CourseResponseDTO> courseResponseDTOList = new ArrayList<>();
 
@@ -141,6 +151,28 @@ public class CourseServiceImpl implements CourseService {
                 moduleResponseDTOList.add(moduleResponseDTO);
             }
 
+            List<EnrollmentResponseDTOServe> enrollmentResponseDTOServeList = new ArrayList<>();
+
+            for (Enrollment enrollment : course.getEnrollments()){
+                EnrollmentResponseDTOServe enrollmentResponseDTOServe = EnrollmentResponseDTOServe.builder()
+                        .enrollmentId(enrollment.getEnrollmentId())
+                        .enrolledDate(enrollment.getEnrolledDate())
+                        .courseId(enrollment.getCourse().getCourseId())
+                        .studentId(enrollment.getStudentId())
+                        .finalGrade(enrollment.getFinalGrade())
+                        .isActive(enrollment.isActive())
+                        .progress(enrollment.getProgress())
+                        .remainingDuration(enrollment.getRemainingDuration())
+                        .build();
+
+                enrollmentResponseDTOServeList.add(enrollmentResponseDTOServe);
+            }
+
+            List<AssessmentResponseDTO> assessmentResponseDTOList
+                    = allAssessmentResponseDTOList.stream()
+                        .filter(dto -> dto.getCourseId().equals(course.getCourseId())).toList();
+
+
             CourseResponseDTO courseResponseDTO = new CourseResponseDTO(
                     course.getCourseId(),
                     course.getTitle(),
@@ -148,11 +180,12 @@ public class CourseServiceImpl implements CourseService {
                     course.getCourseCode(),
                     course.getDuration(),
                     course.getTeacherId(),
-                    moduleResponseDTOList
+                    moduleResponseDTOList,
+                    assessmentResponseDTOList,
+                    enrollmentResponseDTOServeList
             );
 
             courseResponseDTOList.add(courseResponseDTO);
-
         }
 
         return courseResponseDTOList;

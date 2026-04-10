@@ -5,6 +5,7 @@ import com.ctx.audit_log_service.models.AuditLog;
 import com.ctx.audit_log_service.services.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,12 @@ public class AuditController {
                                                 @RequestParam Action action,
                                                 @RequestParam("resource") String resource) throws Exception{
         return  ResponseEntity.ok(auditLogService.createAudit(userId,action,resource));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public  ResponseEntity<List<AuditLog>> findAllAudits(@RequestParam Integer pageNumber){
+        return  ResponseEntity.ok(auditLogService.findAllAudits(pageNumber));
     }
 
     /**
@@ -45,6 +52,7 @@ public class AuditController {
      * @throws Exception If an error occurs during the retrieval process.
      */
     @GetMapping("{userId}/from")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AuditLog>> viewAudits(
             @PathVariable UUID userId,
             @RequestParam("page") Integer startPage
@@ -63,6 +71,7 @@ public class AuditController {
      * @throws Exception If an error occurs during the search process.
      */
     @GetMapping("by")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AuditLog>> viewAuditsBy(
             @RequestParam("resource") String resource,
             @RequestParam("from") Integer startPage) throws Exception {

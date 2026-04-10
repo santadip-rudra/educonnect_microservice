@@ -1,5 +1,7 @@
 package com.ctx.course_service.dto;
 
+import com.ctx.course_service.dto.assessment.AssessmentResponseDTO;
+import com.ctx.course_service.dto.enrollment.EnrollmentResponseDTOServe;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.List;
@@ -13,6 +15,8 @@ public record CourseResponseDTO (
     @NotBlank  String courseCode,
     @NotBlank   Double duration,
     @NotBlank UUID teacherId,
-    List<ModuleResponseDTO> moduleResponseDTO
+     List<ModuleResponseDTO> moduleResponseDTOList,
+     List<AssessmentResponseDTO> assessmentResponseDTOList,
+     List<EnrollmentResponseDTOServe> enrollmentResponseDTOList
 ){
 }
