@@ -14,14 +14,19 @@ import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
+import com.ctx.course_service.repo.EnrollmentRepo;
 import com.ctx.course_service.service.contract.CourseService;
+import com.ctx.course_service.service.contract.EnrollmentService;
 import com.ctx.course_service.utils.mapper.CourseMapper;
+import jakarta.ws.rs.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service implementation for managing courses within the EduConnect platform.
