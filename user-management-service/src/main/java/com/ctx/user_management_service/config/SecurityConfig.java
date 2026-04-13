@@ -16,7 +16,11 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable) // Disable CSRF
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/student/**").permitAll() // Open the door for student lookups
+                        .requestMatchers(
+                                "/student/**",
+                                "/user/register"
+                        )
+                        .permitAll() // Open the door for student lookups
                         .anyRequest().authenticated()
                 )
                 .formLogin(AbstractHttpConfigurer::disable) // Stop the HTML redirect
