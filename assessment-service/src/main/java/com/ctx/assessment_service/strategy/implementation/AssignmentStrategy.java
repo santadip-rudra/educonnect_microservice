@@ -8,6 +8,7 @@ import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.report.assignment.StudentAssignmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.assignment.AssignmentServeDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.assignment.AssignmentRequestDTO;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
@@ -231,6 +232,11 @@ public class AssignmentStrategy implements AssessmentStrategy {
         }
 
         return buildReportDTO(submission);
+    }
+
+    @Override
+    public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
+        return null;
     }
 
     private StudentAssignmentReportDTO buildReportDTO(Submission submission) {

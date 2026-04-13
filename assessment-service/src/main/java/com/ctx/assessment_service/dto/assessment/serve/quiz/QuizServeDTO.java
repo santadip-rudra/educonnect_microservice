@@ -15,5 +15,6 @@ import java.util.UUID;
 @Data
 public class QuizServeDTO extends AssessmentServeDTO {
     private UUID quizId;
+    private Double durationInMinutes;
     List<QuizQuestionServeDTO> quizQuestionServeDTOList;
 }

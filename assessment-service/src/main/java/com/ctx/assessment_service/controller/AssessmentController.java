@@ -6,6 +6,8 @@ import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestD
 import com.ctx.assessment_service.dto.assessment.general.AssessmentResponseDTO;
 import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.SaveAnswerRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.assignment.AssignmentRequestDTO;
 import com.ctx.assessment_service.dto.common.GenericResponse;
@@ -216,6 +218,46 @@ public class AssessmentController {
 
         return ResponseEntity.ok(
                 assessmentService.getAllAssessmentUsingListOfCourseIds(idList)
+        );
+    }
+
+
+    @PostMapping("/quiz/submission/start/{assessmentId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<GenericResponse<QuizSessionResponseDTO>> startQuizSession(
+            @PathVariable UUID assessmentId,
+            @AuthenticationPrincipal CurrentUser user) {
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        assessmentFactory.startSession(assessmentId, user, "QUIZ"),
+                        "Quiz session started",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @PatchMapping("/quiz/submission/answer")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<GenericResponse<Map<String, String>>> saveAnswer(
+            @RequestBody SaveAnswerRequestDTO dto,
+            @AuthenticationPrincipal CurrentUser user) throws BadRequestException {
+
+        assessmentFactory.saveAnswer(
+                "QUIZ",
+                dto.getSubmissionId(),
+                dto.getQuestionId(),
+                dto.getSelectedOptionIds()
+        );
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        Map.of("message", "Answer saved"),
+                        "Answer saved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
         );
     }
 }
