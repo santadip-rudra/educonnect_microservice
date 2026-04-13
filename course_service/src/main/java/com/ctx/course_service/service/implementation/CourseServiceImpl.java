@@ -147,7 +147,8 @@ public class CourseServiceImpl implements CourseService {
                         courseModule.getModuleId(),
                         courseModule.getTitle(),
                         courseModule.getDuration(),
-                        courseModule.getSequenceOrder()
+                        courseModule.getSequenceOrder(),
+                        courseModule.getContentUrl()
                 );
                 moduleResponseDTOList.add(moduleResponseDTO);
             }
