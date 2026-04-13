@@ -2,6 +2,7 @@ package com.ctx.student_registry_service.controller;
 
 
 import com.ctx.student_registry_service.dto.attendance.AttendanceResponseDto;
+import com.ctx.student_registry_service.dto.report.AttendanceStatsDTO;
 import com.ctx.student_registry_service.exceptions.custom.StudentNotFoundException;
 import com.ctx.student_registry_service.services.AttendanceService;
 import com.ctx.student_registry_service.utils.mapper.AttendanceMapper;
@@ -45,5 +46,10 @@ public class AttendanceController {
             return ResponseEntity.ok(attendanceMapper.toListResponseDTO(attendanceService.findByStudentIdAndCourseId(studentId, courseId)));
         }
         return  ResponseEntity.badRequest().build();
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<com.ctx.student_registry_service.dto.report.AttendanceStatsDTO> getAttendanceStats() {
+        return ResponseEntity.ok(attendanceService.getAttendanceStats());
     }
 }

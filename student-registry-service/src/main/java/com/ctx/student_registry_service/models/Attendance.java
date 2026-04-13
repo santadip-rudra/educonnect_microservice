@@ -26,5 +26,5 @@ public class Attendance {
     private LocalDateTime date;
 
     @Enumerated(EnumType.STRING)
-    private AttendanceStatus attendanceStatus;
+    private AttendanceStatus attendance_status;
 }

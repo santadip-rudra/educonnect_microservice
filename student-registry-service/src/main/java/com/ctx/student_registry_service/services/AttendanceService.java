@@ -56,7 +56,7 @@ public class AttendanceService {
                 .studentId(s.getStudentId())
                 .courseId(c.courseId())
                 .date(LocalDateTime.now())
-                .attendanceStatus(AttendanceStatus.PRESENT)
+                .attendance_status(AttendanceStatus.PRESENT)
                 .build();
 
         attendanceRepo.save(a);
@@ -71,5 +71,10 @@ public class AttendanceService {
     }
     public List<Attendance> findByStudentIdAndCourseId(UUID studentId, UUID courseId) {
         return attendanceRepo.findByCourseAndAttendance(studentId,courseId);
+    }
+
+    // --- Added for Reporting ---
+    public com.ctx.student_registry_service.dto.report.AttendanceStatsDTO getAttendanceStats() {
+        return attendanceRepo.getGlobalAttendanceStats();
     }
 }

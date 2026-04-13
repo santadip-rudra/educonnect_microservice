@@ -17,4 +17,5 @@ public interface CourseService{
 List<ModuleResponseDTO> getAllModulesOfACourse(UUID courseId );
 
     List<CourseResponseDTO> getCoursesByTeacherId(UUID id);
+    public List<CourseResponseDTO> getAllCourses();
 }

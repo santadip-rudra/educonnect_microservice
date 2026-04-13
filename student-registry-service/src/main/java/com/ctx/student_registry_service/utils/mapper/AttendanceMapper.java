@@ -17,7 +17,7 @@ public class AttendanceMapper{
                 entity.getStudentId(),
                 entity.getCourseId(),
                 entity.getDate(),
-                entity.getAttendanceStatus().name()
+                entity.getAttendance_status().name()
         );
     }
 

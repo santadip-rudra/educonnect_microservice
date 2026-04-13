@@ -25,6 +25,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth->
                         auth
                                 .requestMatchers("/error").permitAll()
+                                .requestMatchers("/assessments/stats").permitAll()
+                                .requestMatchers("/v2/api/attendance/stats").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

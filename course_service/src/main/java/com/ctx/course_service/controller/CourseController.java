@@ -153,4 +153,9 @@ public class CourseController {
                 )
         );
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<CourseResponseDTO>> getAllCourses() {
+        return ResponseEntity.ok(courseService.getAllCourses());
+    }
 }

@@ -186,4 +186,12 @@ public class CourseServiceImpl implements CourseService {
 
         return courseResponseDTOList;
     }
+
+    @Override
+    public List<CourseResponseDTO> getAllCourses() {
+        return courseRepo.findAll()
+                .stream()
+                .map(courseMapper::toResponseDTO)
+                .toList();
+    }
 }

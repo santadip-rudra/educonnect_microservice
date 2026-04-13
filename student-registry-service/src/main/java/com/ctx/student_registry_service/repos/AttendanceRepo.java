@@ -1,5 +1,6 @@
 package com.ctx.student_registry_service.repos;
 
+import com.ctx.student_registry_service.dto.report.AttendanceStatsDTO;
 import com.ctx.student_registry_service.models.Attendance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -47,4 +48,13 @@ public interface AttendanceRepo extends JpaRepository<Attendance, UUID> {
      */
     @Query("Select a from Attendance a where a.studentId = :studentId AND a.courseId = :courseId")
     List<Attendance> findByCourseAndAttendance(@Param("studentId") UUID studentId, @Param("courseId") UUID courseId);
+
+
+    // --- Added for Reporting ---
+    @Query("SELECT new com.ctx.student_registry_service.dto.report.AttendanceStatsDTO(" +
+            "COUNT(CASE WHEN a.attendance_status = 'PRESENT' THEN 1 END), " +
+            "COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END), " +
+            "COALESCE(AVG(CASE WHEN a.attendance_status = 'PRESENT' THEN 100.0 ELSE 0.0 END), 0.0)) " + // Added COALESCE
+            "FROM Attendance a")
+    AttendanceStatsDTO getGlobalAttendanceStats();
 }

@@ -121,6 +121,20 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
+        # 8. Report Service (General)
+        - id: report_service
+          uri: lb://report-service
+          predicates:
+            - Path=/reports/**
+          filters:
+            - name: RateLimiter
+              args:
+                routeId: assessment_service
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
 # --- Discovery & Logging ---
 eureka:
   client:
