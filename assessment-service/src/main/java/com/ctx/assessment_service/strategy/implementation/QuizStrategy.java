@@ -27,6 +27,7 @@ import com.ctx.assessment_service.repo.assessment.quiz.QuestionOptionRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.QuestionRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.QuizRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.StudentQuizQuestionResponseRepo;
+import com.ctx.assessment_service.service.contract.image.ImageService;
 import com.ctx.assessment_service.service.contract.result.ResultService;
 import com.ctx.assessment_service.strategy.contract.AssessmentStrategy;
 import jakarta.transaction.Transactional;
@@ -56,10 +57,12 @@ public class QuizStrategy implements AssessmentStrategy {
     private final SubmissionRepo submissionRepo;
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
     private final ResultService resultService;
+    private final ImageService imageService;
     // private final EnrollmentRepo enrollmentRepo;
 
     private final CourseServiceClient courseServiceClient;
     private final UserManagementServiceClient userManagementServiceClient;
+
 
     @Override
     public boolean supports(AssessmentType type) {
@@ -174,6 +177,10 @@ public class QuizStrategy implements AssessmentStrategy {
                             = new QuizQuestionServeDTO();
                     qDto.setQuizQuestionId(question.getQuestionId());
                     qDto.setQuestionText(question.getQuestionText());
+                    qDto.setImageUri(
+                            question.getHasImage() == null? null :
+                            imageService.generateImageUri("question",question.getQuestionId())
+                    );
 
                     if (question.getQuestionOptionList() != null) {
 
@@ -183,6 +190,12 @@ public class QuizStrategy implements AssessmentStrategy {
                                     QuestionOptionServeDTO oDto = new QuestionOptionServeDTO();
                                     oDto.setQuestionOptionId(option.getQuestionOptionId());
                                     oDto.setOptionText(option.getOptionText());
+                                    oDto.setImageUri(
+                                            option.getHasImage() == null?
+                                                    null :
+                                            imageService.generateImageUri("option",option.getQuestionOptionId())
+
+                                    );
                                     return oDto;
                                 })
                                 .toList();

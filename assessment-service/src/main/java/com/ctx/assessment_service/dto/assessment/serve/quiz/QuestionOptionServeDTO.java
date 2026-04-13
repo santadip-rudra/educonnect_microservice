@@ -8,4 +8,5 @@ import java.util.UUID;
 public class QuestionOptionServeDTO {
     private String optionText;
     private UUID questionOptionId;
+    private String imageUri;
 }

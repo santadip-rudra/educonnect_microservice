@@ -9,5 +9,6 @@ import java.util.UUID;
 public class QuizQuestionServeDTO {
     private UUID quizQuestionId;
     private String questionText;
+    private String imageUri;
     private List<QuestionOptionServeDTO> questionOptionServeDTOList;
 }

@@ -21,6 +21,7 @@ public class TokenBucketRateLimiter implements RateLimiter {
 
     @Override
     public boolean isAllowed(String key) {
+        //if(true) return true;
         Bucket bucket = buckets.computeIfAbsent(key,k-> new Bucket(capacity, Instant.now().getEpochSecond()));
         synchronized (bucket){
             long now = Instant.now().getEpochSecond();

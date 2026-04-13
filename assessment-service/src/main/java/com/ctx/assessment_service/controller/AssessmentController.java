@@ -9,26 +9,31 @@ import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.assignment.AssignmentRequestDTO;
 import com.ctx.assessment_service.dto.common.GenericResponse;
+import com.ctx.assessment_service.dto.image.serve.ImageStreamDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
+import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
 import com.ctx.assessment_service.factory.AssessmentFactory;
 import com.ctx.assessment_service.model.Assessment;
 import com.ctx.assessment_service.service.contract.assessment.AssessmentService;
+import com.ctx.assessment_service.service.contract.image.ImageService;
 import jakarta.annotation.Nullable;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -41,6 +46,7 @@ import java.util.UUID;
 public class AssessmentController {
     private final AssessmentFactory assessmentFactory;
     private final AssessmentService assessmentService;
+    private final ImageService imageService;
     /**
      *
      * @param dto The payload
@@ -65,6 +71,62 @@ public class AssessmentController {
                 ),
                 HttpStatus.CREATED
         );
+    }
+
+    @PatchMapping(value = "/question/{questionId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> uploadQuestionImage(
+            @PathVariable String questionId,
+            @RequestParam("image") MultipartFile file
+    ) throws IOException {
+
+        imageService.uploadQuestionImage(UUID.fromString(questionId), file);
+        return ResponseEntity.ok(
+                Map.of("message","Question image uploaded successfully")
+        );
+    }
+
+    @PatchMapping(value = "/option/{optionId}/image",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> uploadOptionImage(
+            @PathVariable String optionId,
+            @RequestParam("image") MultipartFile file
+    ) throws IOException {
+        imageService.uploadOptionImage(UUID.fromString(optionId), file);
+        return ResponseEntity.ok(
+                Map.of("message","Option image uploaded successfully")
+        );
+    }
+
+    @GetMapping("/quiz/view/{type}/image/{id}")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT') or hasRole('ADMIN')")
+    public void viewImage(
+        @PathVariable("type") String type,
+        @PathVariable("id") UUID id,
+        HttpServletResponse response
+    ) throws IOException {
+        ImageStreamDTO imageStreamDTO = null;
+
+        if(type.equalsIgnoreCase("question")){
+            imageStreamDTO = imageService.getQuestionImage(id);
+        }else if(type.equalsIgnoreCase("option")){
+            imageStreamDTO = imageService.getOptionImage(id);
+        }else {
+            throw new BadRequestException("Invalid image type: " + type + ". Must be 'question' or 'option'");
+        }
+
+        if(imageStreamDTO == null){
+            throw new ResourceNotFoundException("Image data not foud");
+        }
+
+        InputStream inputStream = imageStreamDTO.getInputStream();
+
+        response.setHeader("Content-Disposition",
+                "inline; filename=\""  + imageStreamDTO.getFileName() + "\"");
+        response.setContentType(imageStreamDTO.getContentType());
+
+
+        StreamUtils.copy(inputStream,response.getOutputStream());
     }
 
     /**
