@@ -14,15 +14,19 @@ import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
-import com.ctx.course_service.service.contract.CourseModuleInterface;
+import com.ctx.course_service.repo.EnrollmentRepo;
 import com.ctx.course_service.service.contract.CourseService;
+import com.ctx.course_service.service.contract.EnrollmentService;
 import com.ctx.course_service.utils.mapper.CourseMapper;
+import jakarta.ws.rs.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service implementation for managing courses within the EduConnect platform.
@@ -40,8 +44,6 @@ public class CourseServiceImpl implements CourseService {
     private final CourseRepo courseRepo;
 
     private final CourseMapper courseMapper;
-
-    private final CourseModuleInterface courseModuleInterface;
 
     private final TeacherClient client;
 
@@ -146,7 +148,7 @@ public class CourseServiceImpl implements CourseService {
                         courseModule.getTitle(),
                         courseModule.getDuration(),
                         courseModule.getSequenceOrder(),
-                        courseModuleInterface.getModuleUrl(courseModule.getModuleId())
+                        courseModule.getContentUrl()
                 );
                 moduleResponseDTOList.add(moduleResponseDTO);
             }
