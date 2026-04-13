@@ -4,12 +4,14 @@ package com.ctx.assessment_service.strategy.contract;
 import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
 import com.ctx.assessment_service.model.enums.AssessmentType;
 import org.apache.coyote.BadRequestException;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -143,4 +145,9 @@ public interface AssessmentStrategy {
      */
     AssessmentReportDTO getReport(UUID submissionId, CurrentUser user) throws BadRequestException;
 
+    QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user);
+
+    default void saveAnswer(UUID submissionId, UUID questionId, List<UUID> selectedOptionIds) throws BadRequestException {
+        throw new BadRequestException("saveAnswer not supported for this assessment type");
+    }
 }

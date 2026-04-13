@@ -36,6 +36,8 @@ public class SessionController {
         AuthResponseDto dto = AuthResponseDto.builder()
                 .refreshToken(tokenEntity.getToken())
                 .accessToken(accessToken)
+                .role(user.getRole().toString())
+                .userId(user.getUserId())
                 .build();
 
         return ResponseEntity.ok(dto);

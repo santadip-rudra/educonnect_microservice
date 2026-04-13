@@ -13,6 +13,8 @@ import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.quiz.QuestionOptionServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.quiz.QuizQuestionServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.quiz.QuizServeDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.SavedAnswerDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.quiz.StudentQuestionAndAnswerDTO;
 import com.ctx.assessment_service.dto.assessment.submit.quiz.StudentQuizQuestionResponseDTO;
@@ -23,10 +25,7 @@ import com.ctx.assessment_service.model.*;
 import com.ctx.assessment_service.model.enums.AssessmentType;
 import com.ctx.assessment_service.repo.assessment.AssessmentRepo;
 import com.ctx.assessment_service.repo.assessment.SubmissionRepo;
-import com.ctx.assessment_service.repo.assessment.quiz.QuestionOptionRepo;
-import com.ctx.assessment_service.repo.assessment.quiz.QuestionRepo;
-import com.ctx.assessment_service.repo.assessment.quiz.QuizRepo;
-import com.ctx.assessment_service.repo.assessment.quiz.StudentQuizQuestionResponseRepo;
+import com.ctx.assessment_service.repo.assessment.quiz.*;
 import com.ctx.assessment_service.service.contract.image.ImageService;
 import com.ctx.assessment_service.service.contract.result.ResultService;
 import com.ctx.assessment_service.strategy.contract.AssessmentStrategy;
@@ -34,9 +33,12 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +57,7 @@ public class QuizStrategy implements AssessmentStrategy {
     private final QuestionOptionRepo questionOptionRepo;
     private final AssessmentRepo assessmentRepo;
     private final SubmissionRepo submissionRepo;
+    private final QuizDraftAnswerRepo quizDraftAnswerRepo;
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
     private final ResultService resultService;
     private final ImageService imageService;
@@ -97,6 +100,7 @@ public class QuizStrategy implements AssessmentStrategy {
 
         Quiz quiz = new Quiz();
         quiz.setAssessment(assessment);
+        quiz.setDurationMinutes(((CreateQuizRequestDTO)assessmentRequestDTO).getDurationMinutes());
         quizRepo.save(quiz);
 
 
@@ -146,22 +150,25 @@ public class QuizStrategy implements AssessmentStrategy {
     @Override
     public AssessmentServeDTO serveAssessment(UUID assessmentId, CurrentUser user) throws BadRequestException {
 
-        if (user.getRole().equals("STUDENT") &&
-                submissionRepo.existsByStudentIdAndAssessmentAssessmentId(
-                user.getUserId(), assessmentId
-                )) {
-            throw new BadRequestException("Student `" + user.getUsername()
-                    + "` has already already attempted the Quiz");
+        if (user.getRole().equals("STUDENT")) {
+            Optional<Submission> existing =
+                    submissionRepo.findByStudentIdAndAssessmentAssessmentId(user.getUserId(),assessmentId);
+
+            if (existing.isPresent() &&
+                    existing.get().getSubmissionStatus() == SubmissionStatus.SUBMITTED) {
+                throw new BadRequestException("Student `" + user.getUsername()
+                        + "` has already submitted this quiz");
+            }
         }
 
         Quiz quiz = quizRepo.findQuizWithQuestionAndOptions(assessmentId)
-                .orElseThrow(()-> new ResourceNotFoundException("Quiz not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
 
         Assessment assessment = quiz.getAssessment();
 
-        if(user.getRole().equals("STUDENT") &&
-                !courseServiceClient.isStudentEnrolled(user.getUserId(),assessment.getCourseId()).getData()){
-            throw new BadRequestException("Student `" + user.getUsername() + "` did not enroll to the course" );
+        if (user.getRole().equals("STUDENT") &&
+                !courseServiceClient.isStudentEnrolled(user.getUserId(), assessment.getCourseId()).getData()) {
+            throw new BadRequestException("Student `" + user.getUsername() + "` is not enrolled in this course");
         }
 
         return mapToQuizServeDTO(quiz);
@@ -204,10 +211,13 @@ public class QuizStrategy implements AssessmentStrategy {
                     return qDto;
                 })
                 .toList();
-        QuizServeDTO quizServeDTO = new QuizServeDTO(quiz.getQuizId(), questionDTOs);
+
+        QuizServeDTO quizServeDTO
+                = new QuizServeDTO(quiz.getQuizId(), quiz.getDurationMinutes(), questionDTOs);
 
         quizServeDTO.setAssessmentType(AssessmentType.QUIZ);
         quizServeDTO.setTitle(quiz.getAssessment().getTitle());
+        quizServeDTO.setDurationInMinutes(quiz.getDurationMinutes());
 
         return quizServeDTO;
     }
@@ -279,82 +289,173 @@ public class QuizStrategy implements AssessmentStrategy {
         StudentQuizQuestionResponseDTO dto = (StudentQuizQuestionResponseDTO) assessmentRequestDTO;
 
         Assessment assessment = assessmentRepo.findById(dto.getAssessmentId())
-                .orElseThrow(()-> new ResourceNotFoundException("Assessment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
 
-        if(!courseServiceClient.isStudentEnrolled(student.getUserId(),assessment.getCourseId()).getData()){
-            throw new BadRequestException("Student with id `" + student.getUserId() + "` did not enroll to the course" );
+        if (!courseServiceClient.isStudentEnrolled(student.getUserId(), assessment.getCourseId()).getData()) {
+            throw new BadRequestException("Student with id `" + student.getUserId() + "` did not enroll to the course");
         }
 
-        if(submissionRepo.existsByStudentIdAndAssessmentAssessmentId(student.getUserId(),assessment.getAssessmentId())){
+        Optional<Submission> existingSubmission =
+                submissionRepo.findByStudentIdAndAssessmentAssessmentId(student.getUserId(), dto.getAssessmentId());
+
+        if (existingSubmission.isPresent()
+                && existingSubmission.get().getSubmissionStatus().equals(SubmissionStatus.SUBMITTED)) {
             throw new BadRequestException(
-                    "Student: `" + student.getUsername() + " already submitted the course"
+                    "Student: `" + student.getUsername() + "` already submitted this quiz"
             );
         }
 
-        Quiz quiz = quizRepo.findById(dto.getQuizId())
-                .orElseThrow(()-> new ResourceNotFoundException("Quiz not found"));
+        if (existingSubmission.isEmpty()) {
+            throw new BadRequestException(
+                    "No active session found for student: `" + student.getUsername()
+                            + "`. Please start the quiz before submitting."
+            );
+        }
 
-        if(!quiz.getAssessment().getAssessmentId().equals(assessment.getAssessmentId())){
+        return getSubmitResponseData(existingSubmission.get(), student, dto, assessment);
+    }
+
+    private Map<String, String> getSubmitResponseData(
+            Submission submission,
+            CurrentUser student,
+            StudentQuizQuestionResponseDTO dto,
+            Assessment assessment) throws BadRequestException {
+
+        Quiz quiz = quizRepo.findById(dto.getQuizId())
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+
+        if (!quiz.getAssessment().getAssessmentId().equals(assessment.getAssessmentId())) {
             throw new BadRequestException("Quiz does not belong to the given assessment");
         }
 
-        Submission submission =
-                Submission.builder()
-                        .studentId(student.getUserId())
-                        .assessment(assessment)
-                        .submissionStatus(SubmissionStatus.NOT_SUBMITTED)
-                        .build();
-
-        submissionRepo.save(submission);
-
-        List<StudentQuestionAndAnswerDTO> studentQuestionAndAnswerDTOList = dto.getStudentQuestionAndAnswerDTOList();
+        List<StudentQuestionAndAnswerDTO> studentQuestionAndAnswerDTOList =
+                dto.getStudentQuestionAndAnswerDTOList();
 
         List<StudentQuizQuestionResponse> studentQuizQuestionResponseList = new ArrayList<>();
 
-        for(StudentQuestionAndAnswerDTO studentQuestionAndAnswerDTO : studentQuestionAndAnswerDTOList){
+        for (StudentQuestionAndAnswerDTO studentQuestionAndAnswerDTO : studentQuestionAndAnswerDTOList) {
+
+            Question question = questionRepo.findById(studentQuestionAndAnswerDTO.getQuestionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
+
+            QuestionOption questionOption = questionOptionRepo.findById(studentQuestionAndAnswerDTO.getQuestionOptionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Option not found"));
+
+            if (!questionOption.getQuestion().getQuestionId().equals(question.getQuestionId())) {
+                throw new BadRequestException("Option does not belong to the given question");
+            }
 
             StudentQuizQuestionResponse studentQuizQuestionResponse = new StudentQuizQuestionResponse();
             studentQuizQuestionResponse.setQuiz(quiz);
             studentQuizQuestionResponse.setSubmission(submission);
-
-            Question question = questionRepo.findById(studentQuestionAndAnswerDTO.getQuestionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Question not found!"));
-
-            QuestionOption questionOption = questionOptionRepo.findById(studentQuestionAndAnswerDTO.getQuestionOptionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Option not found not found!"));
-
-            if(!questionOption.getQuestion().getQuestionId().equals(question.getQuestionId())){
-                throw new BadRequestException("Option does not belong to the given question");
-            }
-
             studentQuizQuestionResponse.setQuestion(question);
             studentQuizQuestionResponse.setQuestionOption(questionOption);
-
             studentQuizQuestionResponse.setIsCorrectOptionChosen(questionOption.getIsCorrectOption());
 
             studentQuizQuestionResponseList.add(studentQuizQuestionResponse);
-
         }
+
+        // DELETE the draft
+        quizDraftAnswerRepo.deleteAllBySubmissionId(submission.getSubmissionId());
 
         submission.setSubmissionStatus(SubmissionStatus.SUBMITTED);
         submissionRepo.save(submission);
 
         studentQuizQuestionResponseRepo.saveAll(studentQuizQuestionResponseList);
 
-        String msg = resultService.computeQuizResult(assessment.getAssessmentId(),student.getUserId());
-
-        log.info("Message from resultService : {}",msg );
+        String msg = resultService.computeQuizResult(assessment.getAssessmentId(), student.getUserId());
+        log.info("Message from resultService : {}", msg);
         log.info("Result computed successfully for quiz : {}", quiz.getQuizId());
 
-        Map<String,String> map = new HashMap<>();
-
-        map.put("message", "Attempted the Quiz with id" + quiz.getQuizId());
+        Map<String, String> map = new HashMap<>();
+        map.put("message", "Attempted the Quiz with id " + quiz.getQuizId());
         map.put("assessmentId", assessment.getAssessmentId().toString());
         map.put("quizId", quiz.getQuizId().toString());
-        map.put("submissionId",submission.getSubmissionId().toString());
+        map.put("submissionId", submission.getSubmissionId().toString());
 
         return map;
-
     }
 
+    @Override
+    public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
+
+        Optional<Submission> existing =
+                submissionRepo.findByStudentIdAndAssessmentAssessmentId(user.getUserId(),assessmentId);
+
+        if (existing.isPresent()) {
+            Submission s = existing.get();
+
+            List<QuizDraftAnswer> drafts =
+                    quizDraftAnswerRepo.findAllBySubmissionSubmissionId(s.getSubmissionId());
+
+            List<SavedAnswerDTO> savedAnswers = drafts.stream()
+                    .map(d -> SavedAnswerDTO.builder()
+                            .questionId(d.getQuestionId().toString())
+                            .selectedOptionIds(
+                                    Arrays.asList(d.getSelectedOptionIds().split(","))
+                            )
+                            .build())
+                    .toList();
+
+            return QuizSessionResponseDTO.builder()
+                    .submissionId(s.getSubmissionId())
+                    .startedAt(s.getStartedAt().toString())
+                    .durationMinutes(s.getAssessment().getQuiz().getDurationMinutes())
+                    .savedAnswers(savedAnswers)
+                    .isResumed(true)
+                    .build();
+        }
+
+        Assessment assessment = assessmentRepo.findById(assessmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
+
+        Submission submission = Submission.builder()
+                .assessment(assessment)
+                .studentId(user.getUserId())
+                .submissionStatus(SubmissionStatus.IN_PROGRESS)
+                .startedAt(Instant.now())
+                .build();
+
+        submissionRepo.save(submission);
+
+        return QuizSessionResponseDTO.builder()
+                .submissionId(submission.getSubmissionId())
+                .startedAt(submission.getStartedAt().toString())
+                .durationMinutes(assessment.getQuiz().getDurationMinutes())
+                .savedAnswers(Collections.emptyList())
+                .isResumed(false)
+                .build();
+    }
+
+
+    @Transactional
+    public void saveAnswer(UUID submissionId, UUID questionId, List<UUID> selectedOptionIds) throws BadRequestException {
+
+        Submission submission = submissionRepo.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
+
+        if (submission.getSubmissionStatus() != SubmissionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Cannot save answer — submission is already finalized");
+        }
+
+        String joined = selectedOptionIds.stream()
+                .map(UUID::toString)
+                .collect(Collectors.joining(","));
+
+        Optional<QuizDraftAnswer> existing =
+                quizDraftAnswerRepo.findBySubmissionSubmissionIdAndQuestionId(submissionId, questionId);
+
+        if (existing.isPresent()) {
+            existing.get().setSelectedOptionIds(joined);     // update
+            quizDraftAnswerRepo.save(existing.get());
+        } else {
+            quizDraftAnswerRepo.save(                        // insert
+                    QuizDraftAnswer.builder()
+                            .submission(submission)
+                            .questionId(questionId)
+                            .selectedOptionIds(joined)
+                            .build()
+            );
+        }
+    }
 }

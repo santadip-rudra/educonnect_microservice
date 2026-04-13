@@ -31,4 +31,7 @@ public class Quiz {
 
     @OneToMany(mappedBy = "quiz")
     private List<StudentQuizQuestionResponse> studentQuizResponseList;
+
+    @JoinColumn(nullable = true)
+    private Double durationMinutes;
 }
