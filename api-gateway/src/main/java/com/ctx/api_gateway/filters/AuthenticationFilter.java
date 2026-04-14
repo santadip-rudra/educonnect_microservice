@@ -55,7 +55,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     .flatMap(userDto -> {
                         return chain.filter(exchange.mutate()
                                 .request(exchange.getRequest().mutate()
-                                        .header("X-User-Id", String.valueOf(userDto.getUserId()))
+                                        .header("X-User-Id", userDto.getUserId() != null ? userDto.getUserId().toString() : "")
                                         .header("X-User-Role", userDto.getRole())
                                         .header("X-User-username",userDto.getUsername())
                                         .build())

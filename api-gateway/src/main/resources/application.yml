@@ -123,7 +123,22 @@ spring:
               args:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
+        # 9. Parent Access - Email Verification (public, no auth required)
+        - id: parent_access_verify_public
+          uri: lb://parent-access-service
+          predicates:
+            - Path=/parent-access/verify
 
+        # 10. Parent Access Service (protected)
+        - id: parent_access_service
+          uri: lb://parent-access-service
+          predicates:
+            - Path=/parent-access/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
 
 # --- Discovery & Logging ---
 eureka:
