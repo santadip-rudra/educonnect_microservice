@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,5 +52,6 @@ public class Submission {
     @OneToMany(mappedBy = "submission")
     private List<StudentQuizQuestionResponse> studentQuizQuestionResponseList;
 
-
+    @JoinColumn(nullable = false)
+    private Instant startedAt;
 }

@@ -3,6 +3,7 @@ package com.ctx.assessment_service.factory;
 import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
+import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
@@ -90,6 +91,22 @@ public class AssessmentFactory {
             }
         }
         return list.get(0);
+    }
+
+    public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user, String assessmentType) {
+        return assessmentStrategyList.stream()
+                .filter(s -> s.supports(AssessmentType.valueOf(assessmentType.toUpperCase())))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No strategy for: " + assessmentType))
+                .startSession(assessmentId, user);
+    }
+
+    public void saveAnswer(String assessmentType, UUID submissionId, UUID questionId, List<UUID> selectedOptionIds) throws BadRequestException {
+        assessmentStrategyList.stream()
+                .filter(s -> s.supports(AssessmentType.valueOf(assessmentType.toUpperCase())))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No strategy for: " + assessmentType))
+                .saveAnswer(submissionId, questionId, selectedOptionIds);
     }
 }
 

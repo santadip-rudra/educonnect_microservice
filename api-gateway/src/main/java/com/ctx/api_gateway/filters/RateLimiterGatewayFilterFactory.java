@@ -25,7 +25,7 @@ public class RateLimiterGatewayFilterFactory extends AbstractGatewayFilterFactor
         limiters.put("student_registry_service", new TokenBucketRateLimiter(5,5,60));
         limiters.put("course_service", new TokenBucketRateLimiter(5,5,60));
         limiters.put("assessment_attachment", new TokenBucketRateLimiter(5,5,60));
-        limiters.put("assessment_service", new TokenBucketRateLimiter(10,10,60));
+        limiters.put("assessment_service", new TokenBucketRateLimiter(100,100,1));
     }
     @Override
     public GatewayFilter apply(Config config) {

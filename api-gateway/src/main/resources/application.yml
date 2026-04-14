@@ -85,7 +85,6 @@ spring:
           predicates:
             - Path=/attachment/view/**
 
-
         # 6. Audit Log Service
         - id: audit_log_service
           uri: lb://audit-log-service
@@ -110,7 +109,20 @@ spring:
               args:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
-        # 8. Compliance Service (General)
+       # 8 - Report Service
+        - id: report_service
+          uri: lb://report-service
+          predicates:
+            - Path=/v2/api/reports/**
+          filters:
+            - name: RateLimiter
+              args:
+                routeId: report_service
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+        # 9. Compliance Service (General)
         - id: compliance_service
           uri: lb://compliance-service
           predicates:
@@ -139,6 +151,8 @@ spring:
               args:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
+
+
 
 # --- Discovery & Logging ---
 eureka:

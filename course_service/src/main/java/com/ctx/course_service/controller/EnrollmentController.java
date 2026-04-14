@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -48,6 +49,21 @@ public class EnrollmentController {
                         isEnrolled ?
                                 "Student is enrolled to the course"
                                 :"Student is not enrolled to the course",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+
+    @GetMapping("student/{studentId}")
+    public ResponseEntity<GenericResponse<List<EnrollmentResponseDTO>>> getStudentEnrollments(
+            @PathVariable("studentId") UUID studentId
+    ) {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.getAllEnrollmentsByStudent(studentId),
+                        "Student enrollments retrieved successfully",
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )

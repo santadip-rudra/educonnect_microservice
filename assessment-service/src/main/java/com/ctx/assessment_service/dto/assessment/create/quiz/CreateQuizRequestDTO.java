@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 public class CreateQuizRequestDTO extends CreateAssessmentRequestDTO {
 
-    List<QuizQuestionDTO> questionDTOList;
+    private List<QuizQuestionDTO> questionDTOList;
 
-
+    private Double durationMinutes;
 }
