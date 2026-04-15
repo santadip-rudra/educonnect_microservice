@@ -1,7 +1,8 @@
-package com.ctx.course_service.secuirity;
+package com.ctx.user_management_service.secuirity;
 
 
-import com.ctx.course_service.dto.user.CurrentUser;
+
+import com.ctx.user_management_service.dto.auth_principal.CurrentUser;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

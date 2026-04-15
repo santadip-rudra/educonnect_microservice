@@ -7,16 +7,18 @@ import com.ctx.user_management_service.dto.register.UpdateAdminDTO;
 import com.ctx.user_management_service.dto.register.base_user.UpdateUserDTO;
 import com.ctx.user_management_service.models.Admin;
 import com.ctx.user_management_service.repo.AdminRepo;
-import com.ctx.user_management_service.strategy.RegisterAndUpdateStrategy;
+import com.ctx.user_management_service.strategy.UserStrategy;
 import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AdminRegisterAndUpdateStrategy implements RegisterAndUpdateStrategy {
+public class AdminUserStrategy implements UserStrategy {
     private final AdminRepo adminRepo;
 
     @Override
@@ -41,6 +43,16 @@ public class AdminRegisterAndUpdateStrategy implements RegisterAndUpdateStrategy
         admin.setAdminId(dto.getId());
         adminRepo.save(admin);
         return Map.of("message","User[Role: " + dto.getRole() + "] registered successfully");
+    }
+
+    @Override
+    public UserResponse getUserDetails(UUID userId) {
+        return null;
+    }
+
+    @Override
+    public List<UserResponse> getAllUser() {
+        return null;
     }
 
 }

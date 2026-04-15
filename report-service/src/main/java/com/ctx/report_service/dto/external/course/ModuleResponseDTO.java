@@ -1,8 +1,8 @@
-package com.ctx.course_service.dto;
+package com.ctx.report_service.dto.external.course;
 
 import java.util.UUID;
 
-public record  ModuleResponseDTO (
+public record ModuleResponseDTO(
         String contentUrl,
         UUID moduleId,
         String title,

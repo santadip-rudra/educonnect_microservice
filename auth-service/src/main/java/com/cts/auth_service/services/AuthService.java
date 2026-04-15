@@ -91,6 +91,7 @@ public class AuthService {
                     .message("success")
                     .role(entity.getRole().toString())
                     .userId(entity.getUserId())
+                    .username(entity.getUsername())
                     .status(true)
                     .build();
         }
