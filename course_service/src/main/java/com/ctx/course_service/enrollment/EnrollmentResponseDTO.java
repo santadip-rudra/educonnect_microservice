@@ -5,6 +5,8 @@ import lombok.Builder; // Add this
 import lombok.Data;
 import lombok.NoArgsConstructor; // Good practice for DTOs
 
+import java.util.UUID;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor // Added for better compatibility
@@ -14,4 +16,5 @@ public class EnrollmentResponseDTO {
     private String studentName; // Changed to lowercase 's' (Java convention)
     private String courseDescription;
     private Double durationInSec;
+    private UUID courseId;
 }
