@@ -50,7 +50,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getTitle(),
                 student.getFullName(),
                 course.getDescription(),
-                course.getDuration()
+                course.getDuration(),
+                course.getCourseId()
         );
     }
 
@@ -84,7 +85,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                             enrollment.getCourse() != null ? enrollment.getCourse().getTitle() : "Unknown Course",
                             student.getFullName(),
                             enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "",
-                            enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0
+                            enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0,
+                            enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null
                     ))
                     .collect(Collectors.toList());
 
