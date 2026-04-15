@@ -11,6 +11,9 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+
+//student quiz score
+
 public class StudentResultDTO {
     private UUID resultId;
     private UUID studentId;
