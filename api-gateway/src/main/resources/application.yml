@@ -5,26 +5,8 @@ spring:
   application:
     name: api-gateway
 
-  # --- Database Configuration ---
-  # Note: Keeping this here only if Gateway performs Auth DB checks.
-  # Otherwise, move to the specific Auth-Service.
-#  datasource:
-#    url: jdbc:mysql://localhost:3306/auth?createDatabaseIfNotExist=true
-#    username: root
-#    password: root
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-
-  # --- Gateway Logic ---
   cloud:
     gateway:
-      # FIX: Global CORS must be a direct child of 'gateway', not inside 'routes'
       globalcors:
         cors-configurations:
           '[/**]':
@@ -39,7 +21,13 @@ spring:
             allowCredentials: true
 
       routes:
-        # 1. User Management Service
+        # 1. Auth Service (no AuthFilter needed)
+        - id: auth_service
+          uri: lb://auth-service
+          predicates:
+            - Path=/auth/**, /session/**
+
+        # 2. User Management Service
         - id: user_management_service
           uri: lb://user-management-service
           predicates:
@@ -50,25 +38,7 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
-        # 2. Student Registry Service
-        - id: student_registry_service
-          uri: lb://student-registry-service
-          predicates:
-            - Path=/demographics/**, /v2/api/docs/**, /v2/api/attendance/**
-          filters:
-            - name: AuthenticationFilter
-              args:
-                authUrl: http://auth-service/auth/validate
-                forwardHeaders: true
-
-        # 3. Auth Service (No AuthFilter needed here usually)
-        - id: auth_service
-          uri: lb://auth-service
-          predicates:
-            - Path=/auth/** , /session/**
-
-
-        # 4. Course Service
+        # 3. Course Service
         - id: course_service
           uri: lb://course-service
           predicates:
@@ -79,13 +49,35 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
-        # 5. Assessment Service (Attachments view)
+        # 4. Assessment Service (attachment view — no auth)
         - id: assessment_attachment
           uri: lb://assessment-service
           predicates:
             - Path=/attachment/view/**
 
-        # 6. Audit Log Service
+        # 5. Assessment Service (general)
+        - id: assessment_service
+          uri: lb://assessment-service
+          predicates:
+            - Path=/assessment/**, /attachment/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
+        # 6. Student Registry Service
+        - id: student_registry_service
+          uri: lb://student-registry-service
+          predicates:
+            - Path=/demographics/**, /v2/api/docs/**, /v2/api/attendance/**
+          filters:
+            - name: AuthenticationFilter
+              args:
+                authUrl: http://auth-service/auth/validate
+                forwardHeaders: true
+
+        # 7. Audit Log Service
         - id: audit_log_service
           uri: lb://audit-log-service
           predicates:
@@ -99,21 +91,11 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
-        # 7. Assessment Service (General)
-        - id: assessment_service
-          uri: lb://assessment-service
-          predicates:
-            - Path=/assessment/**, /attachment/**
-          filters:
-            - name: AuthenticationFilter
-              args:
-                authUrl: http://auth-service/auth/validate
-                forwardHeaders: true
-       # 8 - Report Service
+        # 8. Report Service
         - id: report_service
           uri: lb://report-service
           predicates:
-            - Path=/v2/api/reports/**
+            - Path=/report/**
           filters:
             - name: RateLimiter
               args:
@@ -122,7 +104,8 @@ spring:
               args:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
-        # 9. Compliance Service (General)
+
+        # 9. Compliance Service
         - id: compliance_service
           uri: lb://compliance-service
           predicates:
@@ -136,10 +119,6 @@ spring:
                 authUrl: http://auth-service/auth/validate
                 forwardHeaders: true
 
-
-
-
-# --- Discovery & Logging ---
 eureka:
   client:
     service-url:
@@ -151,5 +130,4 @@ logging:
   level:
     org.springframework.cloud.gateway: TRACE
     org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
     org.springframework.web.cors: DEBUG

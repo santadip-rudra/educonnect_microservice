@@ -11,8 +11,11 @@ import com.ctx.user_management_service.repo.StudentRepo;
 import com.ctx.user_management_service.strategy.UserStrategy;
 import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -78,5 +81,33 @@ public class StudentUserStrategy implements UserStrategy {
                 .isActive(student.getIsActive())
                 .parentEmail(student.getParentEmail())
                 .build();
+    }
+
+    @Override
+    public List<UserResponse> getAllUser() {
+        List<Student> studentList = studentRepo.findAll(Sort.by("fullName"));
+
+        if(studentList == null || studentList.isEmpty()){
+            throw new UserNotFoundException("Students not found");
+        }
+
+        List<UserResponse> studentResponseList = new ArrayList<>();
+
+        for(Student student : studentList){
+            studentResponseList.add(
+                    StudentResponse.builder()
+                            .role("STUDENT")
+                            .studentId(student.getStudentId())
+                            .fullName(student.getFullName())
+                            .email(student.getEmail())
+                            .dateOfBirth(student.getDateOfBirth())
+                            .enrollmentNumber(student.getEnrollmentNumber())
+                            .parentEmail(student.getParentEmail())
+                            .isActive(student.getIsActive())
+                            .build()
+            );
+        }
+
+        return studentResponseList;
     }
 }
