@@ -8,11 +8,11 @@ spring:
   # --- Database Configuration ---
   # Note: Keeping this here only if Gateway performs Auth DB checks.
   # Otherwise, move to the specific Auth-Service.
-  datasource:
-    url: jdbc:mysql://localhost:3306/auth?createDatabaseIfNotExist=true
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+#  datasource:
+#    url: jdbc:mysql://localhost:3306/auth?createDatabaseIfNotExist=true
+#    username: root
+#    password: root
+#    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update

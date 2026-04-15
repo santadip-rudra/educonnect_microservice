@@ -12,11 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
-import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Function;
@@ -85,6 +81,7 @@ public class JwtService {
             return AuthResponseDto.builder()
                     .username(username)
                     .userId(userId)
+                    .username(claims.getSubject())
                     .role(role)
                     .build();
 
