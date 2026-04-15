@@ -10,7 +10,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserStrategyFactory {
     private  final List<UserStrategy> userStrategyList;
-    public UserStrategy getRegisterStrategy(String role){
+    public UserStrategy getStrategy(String role){
         return userStrategyList.stream().filter(
                 registerStrategy -> registerStrategy.supports(role)
         ).toList().get(0);

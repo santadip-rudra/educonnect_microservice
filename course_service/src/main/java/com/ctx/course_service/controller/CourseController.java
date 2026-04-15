@@ -3,7 +3,6 @@ package com.ctx.course_service.controller;
 import com.ctx.course_service.clientCall.TeacherClient;
 import com.ctx.course_service.dto.CourseRequestDTO;
 import com.ctx.course_service.dto.CourseResponseDTO;
-import com.ctx.course_service.dto.ModuleRequestDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.dto.common.GenericResponse;
 import com.ctx.course_service.dto.teacher.TeacherResponse;
@@ -12,6 +11,7 @@ import com.ctx.course_service.exceptions.custom_exceptions.UserIdDonotMatchExcep
 import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.service.contract.CourseModuleInterface;
 import com.ctx.course_service.service.contract.CourseService;
+import com.ctx.course_service.service.contract.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +37,7 @@ public class CourseController {
 
     private final TeacherClient client;
     private final CourseService courseService;
+    private final EnrollmentService enrollmentService;
     private final CourseModuleInterface courseModuleInterface;
 
     @PostMapping("/add-course")
@@ -137,7 +138,7 @@ public class CourseController {
     @GetMapping("/modules/{courseId}")
     public ResponseEntity<List<ModuleResponseDTO>> getAllModulesOfCourse(
             @PathVariable  UUID courseId) {
-        return new ResponseEntity<>(
+        return new ResponseEntity<List<ModuleResponseDTO>>(
                 courseService.getAllModulesOfACourse(courseId),
                 HttpStatus.OK
         );
@@ -150,6 +151,19 @@ public class CourseController {
                 new GenericResponse<>(
                         courseService.getCoursesByTeacherId(teacherId),
                         "Retrieved courses successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/course-data/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllCoursesWithModulesAndEnrollments(){
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.getAllCoursesWithModulesAndEnrollments(),
+                        "Course data retrieved successfully",
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
