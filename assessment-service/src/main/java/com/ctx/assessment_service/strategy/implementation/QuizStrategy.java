@@ -93,6 +93,9 @@ public class QuizStrategy implements AssessmentStrategy {
                         .title(assessmentRequestDTO.getTitle())
                         .type(assessmentRequestDTO.getAssessmentType())
                         .courseId(course.getCourseId())
+                        .weight(assessmentRequestDTO.getWeight() != null && assessmentRequestDTO.getWeight() > 0
+                                ? assessmentRequestDTO.getWeight()
+                                : 1.0)
                         .build();
 
         assessmentRepo.save(assessment);
@@ -186,7 +189,7 @@ public class QuizStrategy implements AssessmentStrategy {
                     qDto.setQuestionText(question.getQuestionText());
                     qDto.setImageUri(
                             question.getHasImage() == null? null :
-                            imageService.generateImageUri("question",question.getQuestionId())
+                                    imageService.generateImageUri("question",question.getQuestionId())
                     );
 
                     if (question.getQuestionOptionList() != null) {
@@ -200,7 +203,7 @@ public class QuizStrategy implements AssessmentStrategy {
                                     oDto.setImageUri(
                                             option.getHasImage() == null?
                                                     null :
-                                            imageService.generateImageUri("option",option.getQuestionOptionId())
+                                                    imageService.generateImageUri("option",option.getQuestionOptionId())
 
                                     );
                                     return oDto;
@@ -446,10 +449,10 @@ public class QuizStrategy implements AssessmentStrategy {
                 quizDraftAnswerRepo.findBySubmissionSubmissionIdAndQuestionId(submissionId, questionId);
 
         if (existing.isPresent()) {
-            existing.get().setSelectedOptionIds(joined);     // update
+            existing.get().setSelectedOptionIds(joined);
             quizDraftAnswerRepo.save(existing.get());
         } else {
-            quizDraftAnswerRepo.save(                        // insert
+            quizDraftAnswerRepo.save(
                     QuizDraftAnswer.builder()
                             .submission(submission)
                             .questionId(questionId)

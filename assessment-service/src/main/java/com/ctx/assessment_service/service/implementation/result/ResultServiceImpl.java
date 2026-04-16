@@ -25,6 +25,7 @@ import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -71,6 +72,9 @@ public class ResultServiceImpl implements ResultService {
 
         resultRepo.save(result);
 
+        // Push updated average to course-service so Enrollment.finalGrade stays current.
+        pushAverageToCourseService(studentId, assessment.getCourseId());
+
         return "result computed successfully";
     }
 
@@ -105,6 +109,9 @@ public class ResultServiceImpl implements ResultService {
 
             resultRepo.save(result);
 
+            // Push updated average to course-service.
+            pushAverageToCourseService(studentId, assessment.getCourseId());
+
             return teacher.getUsername() + " updated the score of the assignment";
         }
 
@@ -130,7 +137,65 @@ public class ResultServiceImpl implements ResultService {
 
         resultRepo.save(result);
 
+        // Push updated average to course-service.
+        pushAverageToCourseService(studentId, assessment.getCourseId());
+
         return "Result of `" + student.getFullName() + "` [evaluated by `" + teacher.getUsername() + "`] saved successfully";
+    }
+
+    /**
+     * Computes the student's weighted average percentageScore across all Results they
+     * have for the given course, then calls course-service to persist it on
+     * Enrollment.finalGrade.
+     *
+     * Formula: sum(score x weight) / sum(weight)
+     *   - Only assessments the student has a Result for contribute to the sum.
+     *   - Ungraded assessments are excluded entirely (not treated as 0),
+     *     so the grade always reflects only what has actually been evaluated.
+     *
+     * Failure handling: if the Feign call fails (course-service down), we log and
+     * swallow -- the Result is already saved, so data is safe. Kafka is the
+     * production-grade upgrade path.
+     */
+    private void pushAverageToCourseService(UUID studentId, UUID courseId) {
+        try {
+            List<Assessment> courseAssessments = assessmentRepo.findByCourseId(courseId);
+            List<UUID> assessmentIds = courseAssessments.stream()
+                    .map(Assessment::getAssessmentId)
+                    .toList();
+
+            // Only include assessments the student has a Result for.
+            // Missing result = not yet graded, not a zero.
+            List<Result> studentResults = resultRepo.findAllByStudentId(studentId).stream()
+                    .filter(r -> r.getAssessment() != null
+                            && assessmentIds.contains(r.getAssessment().getAssessmentId()))
+                    .toList();
+
+            if (studentResults.isEmpty()) {
+                log.warn("No results found for studentId={} courseId={} - skipping finalGrade push", studentId, courseId);
+                return;
+            }
+
+            // Weighted average => sum(score x weight) / sum(weight)
+            double weightedScoreSum = studentResults.stream()
+                    .mapToDouble(r -> r.getPercentageScore() * r.getAssessment().getWeight())
+                    .sum();
+
+            double totalWeight = studentResults.stream()
+                    .mapToDouble(r -> r.getAssessment().getWeight())
+                    .sum();
+
+            double weightedAverage = (totalWeight == 0) ? 0.0 : weightedScoreSum / totalWeight;
+
+            courseServiceClient.updateFinalGrade(studentId, courseId, Map.of("finalGrade", weightedAverage));
+
+            log.info("Pushed weighted finalGrade={} for studentId={} courseId={} ({}/{} assessments graded)",
+                    weightedAverage, studentId, courseId, studentResults.size(), courseAssessments.size());
+
+        } catch (Exception e) {
+            log.error("Failed to push finalGrade to course-service for studentId={} courseId={}: {}",
+                    studentId, courseId, e.getMessage());
+        }
     }
 
     @Override
