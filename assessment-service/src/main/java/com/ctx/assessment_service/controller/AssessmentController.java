@@ -19,6 +19,7 @@ import com.ctx.assessment_service.factory.AssessmentFactory;
 import com.ctx.assessment_service.model.Assessment;
 import com.ctx.assessment_service.service.contract.assessment.AssessmentService;
 import com.ctx.assessment_service.service.contract.image.ImageService;
+import com.ctx.assessment_service.service.contract.result.ResultService;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,7 @@ import java.util.*;
 public class AssessmentController {
     private final AssessmentFactory assessmentFactory;
     private final AssessmentService assessmentService;
+    private final ResultService resultService;
     private final ImageService imageService;
     /**
      *
@@ -260,4 +262,21 @@ public class AssessmentController {
                 )
         );
     }
+
+    @GetMapping("/monthly-exam-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyExamStats(){
+        return ResponseEntity.ok(
+                resultService.getMonthlyExamStats()
+        );
+    }
+
+    @GetMapping("/monthly-assessment-submission-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyAssessmentAndSubmissionStats(){
+        return ResponseEntity.ok(
+                resultService.getMonthlyAssessmentAndSubmissionStats()
+        );
+    }
+
 }

@@ -2,11 +2,15 @@ package com.ctx.assessment_service.service.contract.result;
 
 
 
+import com.ctx.assessment_service.dto.result.ExamStatsDTO;
+import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
+import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.UserNotFoundException;
 import com.ctx.assessment_service.model.Result;
 import org.apache.coyote.BadRequestException;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -41,5 +45,9 @@ public interface ResultService {
      * @return The {@link Result}
      */
     Result getResultWithId(UUID submissionId, CurrentUser user) throws BadRequestException;
+
+    List<MonthlyExamStatsDTO> getMonthlyExamStats();
+
+    List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats();
 }
 

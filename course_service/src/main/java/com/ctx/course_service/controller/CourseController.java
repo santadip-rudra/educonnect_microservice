@@ -1,6 +1,7 @@
 package com.ctx.course_service.controller;
 
 import com.ctx.course_service.clientCall.TeacherClient;
+import com.ctx.course_service.dto.CourseCompletionStatsDTO;
 import com.ctx.course_service.dto.CourseRequestDTO;
 import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
@@ -169,4 +170,13 @@ public class CourseController {
                 )
         );
     }
+
+    @GetMapping("/course-completion-data/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getCourseCompletionStats(){
+        return ResponseEntity.ok(
+                courseService.getCourseCompletionStats()
+        );
+    }
+
 }

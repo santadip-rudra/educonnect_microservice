@@ -3,6 +3,7 @@ package com.ctx.course_service.controller;
 import com.ctx.course_service.dto.common.GenericResponse;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.service.contract.EnrollmentService;
+import com.ctx.course_service.service.contract.ModuleCompletionService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+    private final ModuleCompletionService moduleCompletionService;
 
     @PostMapping("course/{courseId}/student/{studentId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER')")
@@ -68,6 +70,24 @@ public class EnrollmentController {
                         LocalDateTime.now()
                 )
         );
+    }
+
+    @PatchMapping("/mark-as-complete/{moduleId}")
+    public ResponseEntity<?> markModuleAsComplete(
+            @RequestHeader("X-User-Id") UUID studentId,
+            @RequestHeader("X-User-username") String username,
+            @PathVariable("moduleId") UUID moduleId
+    ) {
+        moduleCompletionService.markModuleAsComplete(studentId, moduleId);
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        moduleId + "is marked as completed for " + username,
+                        "module marked as completed successfully!",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+
     }
 
 

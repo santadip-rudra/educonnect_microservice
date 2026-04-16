@@ -4,9 +4,13 @@ import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.external_response.StudentResponse;
+import com.ctx.assessment_service.dto.result.ExamStatsDTO;
+import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
+import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
 import com.ctx.assessment_service.model.*;
+import com.ctx.assessment_service.repo.EntityManagerRepo;
 import com.ctx.assessment_service.repo.assessment.AssessmentRepo;
 import com.ctx.assessment_service.repo.assessment.SubmissionRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.StudentQuizQuestionResponseRepo;
@@ -30,6 +34,8 @@ public class ResultServiceImpl implements ResultService {
     //    private final StudentRepo studentRepo;
     private final ResultRepo resultRepo;
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
+
+    private final EntityManagerRepo entityManagerRepo;
 
     private final UserManagementServiceClient userManagementServiceClient;
     private final CourseServiceClient courseServiceClient;
@@ -137,6 +143,16 @@ public class ResultServiceImpl implements ResultService {
 
         return resultRepo.findBySubmissionSubmissionId(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Result not found"));
+    }
+
+    @Override
+    public List<MonthlyExamStatsDTO> getMonthlyExamStats(){
+        return entityManagerRepo.getMonthlyExamStats();
+    }
+
+    @Override
+    public List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats(){
+        return entityManagerRepo.getMonthlyAssessmentAndSubmissionStats();
     }
 
 }
