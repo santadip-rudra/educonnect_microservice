@@ -6,6 +6,7 @@ import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.dto.assessment.AssessmentResponseDTO;
 import com.ctx.course_service.dto.enrollment.EnrollmentResponseDTOServe;
+import com.ctx.course_service.dto.enrollment.StudentCourseScoreDTO;
 import com.ctx.course_service.dto.external_response.StudentResponse;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.exceptions.custom_exceptions.ResourceNotFoundException;
@@ -104,6 +105,40 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             e.printStackTrace();
             throw e; // Rethrowing ensures it doesn't just hang
         }
+    }
+
+    @Override
+    public void updateFinalGrade(UUID studentId, UUID courseId, Double finalGrade) {
+        Enrollment enrollment = enrollmentRepo
+                .findByStudentIdAndCourseCourseId(studentId, courseId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Enrollment not found for studentId=" + studentId + " courseId=" + courseId));
+
+        enrollment.setFinalGrade(finalGrade);
+        enrollmentRepo.save(enrollment);
+    }
+
+    @Override
+    public List<StudentCourseScoreDTO> getCoursesSortedByScoreForStudent(UUID studentId) {
+        List<Enrollment> enrollments = enrollmentRepo.findByStudentIdOrderByScore(studentId);
+
+        return enrollments.stream()
+                .map(e -> {
+                    Course c = e.getCourse();
+                    return StudentCourseScoreDTO.builder()
+                            .courseId(c.getCourseId())
+                            .courseTitle(c.getTitle())
+                            .courseCode(c.getCourseCode())
+                            .courseDescription(c.getDescription())
+                            .finalGrade(e.getFinalGrade())
+                            .progress(e.getProgress())
+                            .remainingDuration(e.getRemainingDuration())
+                            .isActive(e.isActive())
+                            .enrolledDate(e.getEnrolledDate())
+                            .completedDate(e.getCompletedDate())
+                            .build();
+                })
+                .toList();
     }
 
     @Override

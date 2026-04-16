@@ -1,6 +1,7 @@
 package com.ctx.course_service.service.contract;
 
 import com.ctx.course_service.dto.CourseResponseDTO;
+import com.ctx.course_service.dto.enrollment.StudentCourseScoreDTO;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.Enrollment;
@@ -17,4 +18,8 @@ public interface EnrollmentService {
     List<EnrollmentResponseDTO> getAllEnrollmentsByStudent(UUID studentId);
 
     List<CourseResponseDTO> getAllCoursesWithModulesAndEnrollments();
+
+    void updateFinalGrade(UUID studentId, UUID courseId, Double finalGrade);
+
+    List<StudentCourseScoreDTO> getCoursesSortedByScoreForStudent(UUID studentId);
 }

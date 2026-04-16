@@ -45,4 +45,7 @@ public class Assessment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private Double weight = 1.0;
+
 }

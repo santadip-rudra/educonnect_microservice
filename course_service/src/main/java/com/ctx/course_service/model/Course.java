@@ -35,4 +35,7 @@ public class Course {
 
     private Set<Enrollment> enrollments = new HashSet<>();;
 
+    @Column(nullable = false)
+    private Long credit;
+
 }
