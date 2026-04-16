@@ -2,6 +2,9 @@ package com.ctx.assessment_service.service.implementation.result;
 
 import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
+import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
+import com.ctx.assessment_service.dto.assessment.result.StudentResultDTO;
+import org.springframework.transaction.annotation.Transactional;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.external_response.StudentResponse;
 import com.ctx.assessment_service.dto.result.ExamStatsDTO;
@@ -143,6 +146,31 @@ public class ResultServiceImpl implements ResultService {
 
         return resultRepo.findBySubmissionSubmissionId(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Result not found"));
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StudentResultDTO> getAllResultsByStudentId(UUID studentId, CurrentUser user) throws BadRequestException {
+        if (user.getRole().equals("STUDENT") && !user.getUserId().equals(studentId)) {
+            throw new BadRequestException("Not authorized to access these results");
+        }
+
+        List<Result> results = resultRepo.findAllByStudentId(studentId);
+
+        return results.stream().map(r -> StudentResultDTO.builder()
+                .resultId(r.getResultId())
+                .studentId(r.getStudentId())
+                .percentageScore(r.getPercentageScore())
+                .status(r.getStatus() != null ? r.getStatus().name() : null)
+                .assessmentId(r.getAssessment() != null ? r.getAssessment().getAssessmentId() : null)
+                .assessmentTitle(r.getAssessment() != null ? r.getAssessment().getTitle() : null)
+                .maxScore(r.getAssessment() != null ? r.getAssessment().getMaxScore() : null)
+                .assessmentType(r.getAssessment() != null ? r.getAssessment().getType().name() : null)
+                .courseId(r.getAssessment() != null ? r.getAssessment().getCourseId() : null)
+                .submissionId(r.getSubmission() != null ? r.getSubmission().getSubmissionId() : null)
+                .build()
+        ).toList();
     }
 
     @Override

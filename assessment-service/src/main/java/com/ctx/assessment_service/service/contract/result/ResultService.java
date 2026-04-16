@@ -5,6 +5,8 @@ package com.ctx.assessment_service.service.contract.result;
 import com.ctx.assessment_service.dto.result.ExamStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
+import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
+import com.ctx.assessment_service.dto.assessment.result.StudentResultDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.UserNotFoundException;
 import com.ctx.assessment_service.model.Result;
@@ -45,6 +47,8 @@ public interface ResultService {
      * @return The {@link Result}
      */
     Result getResultWithId(UUID submissionId, CurrentUser user) throws BadRequestException;
+
+    List<StudentResultDTO> getAllResultsByStudentId(UUID studentId, CurrentUser user) throws BadRequestException;
 
     List<MonthlyExamStatsDTO> getMonthlyExamStats();
 

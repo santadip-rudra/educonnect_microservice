@@ -32,6 +32,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.ctx.assessment_service.model.Result;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -257,6 +258,23 @@ public class AssessmentController {
                 new GenericResponse<>(
                         Map.of("message", "Answer saved"),
                         "Answer saved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/results/student/{studentId}")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getStudentResults(
+            @PathVariable UUID studentId,
+            @AuthenticationPrincipal CurrentUser user) throws BadRequestException {
+
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        resultService.getAllResultsByStudentId(studentId, user),
+                        "Results retrieved successfully",
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
