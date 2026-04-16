@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -38,6 +40,9 @@ public class CourseModule {
     @JoinColumn(name = "course_id")
     @JsonIgnore
     private Course course;
+
+    @OneToMany(mappedBy = "module", cascade = CascadeType.ALL)
+    private List<ModuleCompletion> moduleCompletions = new ArrayList<>();
 
     @PrePersist
     public void assignSequenceOrder() {

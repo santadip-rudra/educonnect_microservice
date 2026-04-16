@@ -32,7 +32,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.ctx.assessment_service.service.contract.result.ResultService;
 import com.ctx.assessment_service.model.Result;
 
 import java.io.IOException;
@@ -51,8 +50,8 @@ import java.util.*;
 public class AssessmentController {
     private final AssessmentFactory assessmentFactory;
     private final AssessmentService assessmentService;
-    private final ImageService imageService;
     private final ResultService resultService;
+    private final ImageService imageService;
     /**
      *
      * @param dto The payload
@@ -281,4 +280,21 @@ public class AssessmentController {
                 )
         );
     }
+
+    @GetMapping("/monthly-exam-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyExamStats(){
+        return ResponseEntity.ok(
+                resultService.getMonthlyExamStats()
+        );
+    }
+
+    @GetMapping("/monthly-assessment-submission-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyAssessmentAndSubmissionStats(){
+        return ResponseEntity.ok(
+                resultService.getMonthlyAssessmentAndSubmissionStats()
+        );
+    }
+
 }
