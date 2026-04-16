@@ -1,10 +1,12 @@
 package com.ctx.course_service.repo;
 
 import com.ctx.course_service.dto.CourseCompletionStatsDTO;
+import com.ctx.course_service.dto.enrollment.MonthlyEnrollmentStatsDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Repository
@@ -51,5 +53,33 @@ public class EntityManagerRepo {
                         ((Number) row[4]).doubleValue()
                 ))
                 .toList();
+    }
+
+    public List<MonthlyEnrollmentStatsDTO> getMonthlyEnrollmentStats(){
+        String jpql = """
+                    SELECT EXTRACT(YEAR FROM e.enrolledDate)
+                    SELECT EXTRACT(MONTH FROM e.enrolledDate)
+                    SELECT COUNT(e.enrollmentId)
+                    FROM Enrollment e
+                    WHERE e.enrolledDate IS NOT NULL
+                    GROUP BY EXTRACT(YEAR FROM e.enrolledDate),EXTRACT(MONTH FROM e.enrolledDate)
+                    ORDER BY EXTRACT(YEAR FROM e.enrolledDate) ASC, EXTRACT(MONTH FROM e.enrolledDate) ASC
+                    """;
+
+        List<Object[]> results = entityManager.createQuery(jpql).getResultList();
+
+        List<MonthlyEnrollmentStatsDTO> monthlyEnrollmentStatsDTOList = new ArrayList<>();
+
+        for (var result : results){
+            monthlyEnrollmentStatsDTOList.add(
+                    MonthlyEnrollmentStatsDTO.builder()
+                            .year(((Number)result[0]).intValue())
+                            .month(((Number)result[1]).intValue())
+                            .totalEnrollments(((Number)result[2]).intValue())
+                            .build()
+            );
+        }
+
+        return monthlyEnrollmentStatsDTOList;
     }
 }

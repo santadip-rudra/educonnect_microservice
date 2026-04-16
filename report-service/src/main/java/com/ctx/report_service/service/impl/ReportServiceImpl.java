@@ -8,6 +8,7 @@ import com.ctx.report_service.dto.external.assessment.MonthlyAssessmentStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyExamStatsDTO;
 import com.ctx.report_service.dto.external.course.CourseCompletionStatsDTO;
 import com.ctx.report_service.dto.external.course.CourseResponseDTO;
+import com.ctx.report_service.dto.external.course.MonthlyEnrollmentStatsDTO;
 import com.ctx.report_service.dto.report.EnrollmentReportDTO;
 import com.ctx.report_service.service.contract.ReportService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -114,6 +115,19 @@ public class ReportServiceImpl implements ReportService {
                 .retrieve()
                 .bodyToFlux(CoursePassFailStatsDTO.class)
                 .collectList();
+    }
+
+    @Override
+    public Mono<List<MonthlyEnrollmentStatsDTO>> getMonthlyEnrollmentStats(String authHeader, CurrentUser user) {
+        return courseServiceClient.get()
+                .uri("/enrollment/stats/monthly")
+                .header("Authorization", authHeader)
+                .header("X-User-Id",       user.getUserId().toString())
+                .header("X-User-Role",     user.getRole())
+                .header("X-User-username", user.getUsername())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<List<MonthlyEnrollmentStatsDTO>>>() {})
+                .map(GenericResponse::getData);
     }
 
 }

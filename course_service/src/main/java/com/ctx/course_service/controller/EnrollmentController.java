@@ -126,4 +126,17 @@ public class EnrollmentController {
         );
     }
 
+    @GetMapping("/stats/monthly")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyEnrollmentStats() {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.getMonthlyEnrollmentStats(),
+                        "Monthly enrollment stats retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
 }

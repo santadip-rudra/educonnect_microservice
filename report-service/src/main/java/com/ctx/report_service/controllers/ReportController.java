@@ -4,6 +4,7 @@ import com.ctx.report_service.dto.auth_principal.CurrentUser;
 import com.ctx.report_service.dto.external.assessment.CoursePassFailStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyAssessmentStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyExamStatsDTO;
+import com.ctx.report_service.dto.external.course.MonthlyEnrollmentStatsDTO;
 import com.ctx.report_service.service.contract.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -78,5 +79,15 @@ public class ReportController {
     ) {
         return reportService.getCoursePassFailStats(authHeader, currentUser)
                 .map(data -> ResponseEntity.ok(data));
+    }
+
+    @GetMapping("/monthly-enrollment-stats/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<ResponseEntity<List<MonthlyEnrollmentStatsDTO>>> getMonthlyEnrollmentStats(
+            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return reportService.getMonthlyEnrollmentStats(authHeader, currentUser)
+                .map(ResponseEntity::ok);
     }
 }
