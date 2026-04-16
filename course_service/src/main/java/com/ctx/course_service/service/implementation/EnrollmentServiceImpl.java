@@ -1,10 +1,17 @@
 package com.ctx.course_service.service.implementation;
 
+import com.ctx.course_service.clientCall.AssessmentClient;
 import com.ctx.course_service.clientCall.UserManagementServiceClient;
+import com.ctx.course_service.dto.CourseResponseDTO;
+import com.ctx.course_service.dto.ModuleResponseDTO;
+import com.ctx.course_service.dto.assessment.AssessmentResponseDTO;
+import com.ctx.course_service.dto.enrollment.EnrollmentResponseDTOServe;
+import com.ctx.course_service.dto.enrollment.StudentCourseScoreDTO;
 import com.ctx.course_service.dto.external_response.StudentResponse;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.exceptions.custom_exceptions.ResourceNotFoundException;
 import com.ctx.course_service.model.Course;
+import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
 import com.ctx.course_service.repo.EnrollmentRepo;
@@ -13,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -24,6 +32,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     private final CourseRepo courseRepo;
     private final EnrollmentRepo enrollmentRepo;
     private final UserManagementServiceClient userManagementServiceClient;
+    private final AssessmentClient assessmentClient;
 
     @Override
     public EnrollmentResponseDTO enrollStudentToCourse(UUID studentId, UUID courseId) throws BadRequestException {
@@ -50,7 +59,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getTitle(),
                 student.getFullName(),
                 course.getDescription(),
-                course.getDuration()
+                course.getDuration(),
+                course.getCourseId()
         );
     }
 
@@ -84,7 +94,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                             enrollment.getCourse() != null ? enrollment.getCourse().getTitle() : "Unknown Course",
                             student.getFullName(),
                             enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "",
-                            enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0
+                            enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0,
+                            enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null
                     ))
                     .collect(Collectors.toList());
 
@@ -94,5 +105,108 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             e.printStackTrace();
             throw e; // Rethrowing ensures it doesn't just hang
         }
+    }
+
+    @Override
+    public void updateFinalGrade(UUID studentId, UUID courseId, Double finalGrade) {
+        Enrollment enrollment = enrollmentRepo
+                .findByStudentIdAndCourseCourseId(studentId, courseId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Enrollment not found for studentId=" + studentId + " courseId=" + courseId));
+
+        enrollment.setFinalGrade(finalGrade);
+        enrollmentRepo.save(enrollment);
+    }
+
+    @Override
+    public List<StudentCourseScoreDTO> getCoursesSortedByScoreForStudent(UUID studentId) {
+        List<Enrollment> enrollments = enrollmentRepo.findByStudentIdOrderByScore(studentId);
+
+        return enrollments.stream()
+                .map(e -> {
+                    Course c = e.getCourse();
+                    return StudentCourseScoreDTO.builder()
+                            .courseId(c.getCourseId())
+                            .courseTitle(c.getTitle())
+                            .courseCode(c.getCourseCode())
+                            .courseDescription(c.getDescription())
+                            .finalGrade(e.getFinalGrade())
+                            .progress(e.getProgress())
+                            .remainingDuration(e.getRemainingDuration())
+                            .isActive(e.isActive())
+                            .enrolledDate(e.getEnrolledDate())
+                            .completedDate(e.getCompletedDate())
+                            .build();
+                })
+                .toList();
+    }
+
+    @Override
+    public List<CourseResponseDTO> getAllCoursesWithModulesAndEnrollments() {
+        List<Course> courseList = courseRepo.findAllCoursesWithModulesAndEnrollments();
+
+        if(courseList == null || courseList.isEmpty()){
+            throw new ResourceNotFoundException("Courses not found");
+        }
+        List<UUID> courseIdList = courseList.stream().map(Course::getCourseId).toList();
+
+        var allAssessmentResponseDTOList = assessmentClient.getAllAssessmentsByListOfCourseIds(courseIdList.stream().map(id->id.toString()).toList());
+
+        List<CourseResponseDTO> courseResponseDTOList = new ArrayList<>();
+
+        for (Course course : courseList) {
+
+            List<ModuleResponseDTO> moduleResponseDTOList = new ArrayList<>();
+
+            for(CourseModule courseModule : course.getModules()){
+                ModuleResponseDTO moduleResponseDTO = new ModuleResponseDTO(
+                        courseModule.getContentUrl(),
+                        courseModule.getModuleId(),
+                        courseModule.getTitle(),
+                        courseModule.getDuration(),
+                        courseModule.getSequenceOrder(),
+                        courseModule.getContentUrl()
+                );
+                moduleResponseDTOList.add(moduleResponseDTO);
+            }
+
+            List<EnrollmentResponseDTOServe> enrollmentResponseDTOServeList = new ArrayList<>();
+
+            for (Enrollment enrollment : course.getEnrollments()){
+                EnrollmentResponseDTOServe enrollmentResponseDTOServe = EnrollmentResponseDTOServe.builder()
+                        .enrollmentId(enrollment.getEnrollmentId())
+                        .enrolledDate(enrollment.getEnrolledDate())
+                        .courseId(enrollment.getCourse().getCourseId())
+                        .studentId(enrollment.getStudentId())
+                        .finalGrade(enrollment.getFinalGrade())
+                        .isActive(enrollment.isActive())
+                        .progress(enrollment.getProgress())
+                        .remainingDuration(enrollment.getRemainingDuration())
+                        .build();
+
+                enrollmentResponseDTOServeList.add(enrollmentResponseDTOServe);
+            }
+
+            List<AssessmentResponseDTO> assessmentResponseDTOList
+                    = allAssessmentResponseDTOList.stream()
+                    .filter(dto -> dto.getCourseId().equals(course.getCourseId())).toList();
+
+
+            CourseResponseDTO courseResponseDTO = new CourseResponseDTO(
+                    course.getCourseId(),
+                    course.getTitle(),
+                    course.getDescription(),
+                    course.getCourseCode(),
+                    course.getDuration(),
+                    course.getTeacherId(),
+                    moduleResponseDTOList,
+                    assessmentResponseDTOList,
+                    enrollmentResponseDTOServeList
+            );
+
+            courseResponseDTOList.add(courseResponseDTO);
+        }
+
+        return courseResponseDTOList;
     }
 }

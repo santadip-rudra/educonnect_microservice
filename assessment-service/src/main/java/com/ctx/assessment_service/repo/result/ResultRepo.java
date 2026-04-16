@@ -4,6 +4,7 @@ import com.ctx.assessment_service.model.Result;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +15,5 @@ public interface ResultRepo extends JpaRepository<Result, UUID> {
     boolean existsByAssessmentAssessmentId(UUID assessmentId);
     boolean existsByAssessmentAssessmentIdAndStudentId(UUID assessmentId, UUID studentId);
     Optional<Result> findByAssessmentAssessmentIdAndStudentId(UUID assessmentId, UUID studentId);
+    List<Result> findAllByStudentId(UUID studentId);
 }

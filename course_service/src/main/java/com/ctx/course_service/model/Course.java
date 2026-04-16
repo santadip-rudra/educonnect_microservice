@@ -35,14 +35,7 @@ public class Course {
 
     private Set<Enrollment> enrollments = new HashSet<>();;
 
-//    @OneToMany(mappedBy = "course")
-//    @ToString.Exclude
-//    @EqualsAndHashCode.Exclude
-//    private List<Assessment> assessments;
-//
-//    @OneToMany(mappedBy = "course")
-//    private List<Attendance> attendanceList;
-//
-//    @OneToMany(mappedBy = "course")
-//    private List<Engagement> engagements;
+    @Column(nullable = false)
+    private Long credit;
+
 }
