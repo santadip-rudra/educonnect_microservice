@@ -1,6 +1,7 @@
 package com.ctx.report_service.service.contract;
 
 import com.ctx.report_service.dto.auth_principal.CurrentUser;
+import com.ctx.report_service.dto.external.assessment.CoursePassFailStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyAssessmentStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyExamStatsDTO;
 import com.ctx.report_service.dto.external.course.CourseCompletionStatsDTO;
@@ -14,4 +15,5 @@ public interface ReportService {
     Mono<List<MonthlyExamStatsDTO>> getMonthlyExamStats(String authHeader, CurrentUser user);
     Mono<List<MonthlyAssessmentStatsDTO>> getMonthlyAssessmentAndSubmissionStats(String authHeader, CurrentUser user);
     Mono<List<CourseCompletionStatsDTO>> getCourseCompletionStats(String authHeader, CurrentUser user);
+    Mono<List<CoursePassFailStatsDTO>> getCoursePassFailStats(String authHeader, CurrentUser user);
 }

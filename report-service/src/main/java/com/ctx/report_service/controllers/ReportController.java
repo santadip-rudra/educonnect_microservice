@@ -1,6 +1,7 @@
 package com.ctx.report_service.controllers;
 
 import com.ctx.report_service.dto.auth_principal.CurrentUser;
+import com.ctx.report_service.dto.external.assessment.CoursePassFailStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyAssessmentStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyExamStatsDTO;
 import com.ctx.report_service.service.contract.ReportService;
@@ -66,6 +67,16 @@ public class ReportController {
             @AuthenticationPrincipal CurrentUser currentUser
     ){
         return reportService.getCourseCompletionStats(authHeader,currentUser)
+                .map(data -> ResponseEntity.ok(data));
+    }
+
+    @GetMapping("/pass-fail-stats/by-course")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<ResponseEntity<List<CoursePassFailStatsDTO>>> getCoursePassFailStats(
+            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return reportService.getCoursePassFailStats(authHeader, currentUser)
                 .map(data -> ResponseEntity.ok(data));
     }
 }

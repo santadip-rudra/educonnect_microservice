@@ -1,5 +1,6 @@
 package com.ctx.assessment_service.repo;
 
+import com.ctx.assessment_service.dto.result.CoursePassFailStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
 import jakarta.persistence.EntityManager;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Repository
 public class EntityManagerRepo {
@@ -106,6 +108,31 @@ public class EntityManagerRepo {
                         (int) data[1],  // month
                         data[2],        // totalAssessments
                         data[3]         // totalSubmissions
+                ))
+                .toList();
+    }
+
+    public List<CoursePassFailStatsDTO> getCoursePassFailStats() {
+
+        String jpql = """
+        SELECT
+            r.assessment.courseId,
+            COUNT(r.resultId),
+            SUM(CASE WHEN r.status = com.ctx.assessment_service.model.ResultStatus.PASSED THEN 1 ELSE 0 END),
+            SUM(CASE WHEN r.status = com.ctx.assessment_service.model.ResultStatus.FAILED THEN 1 ELSE 0 END)
+        FROM Result r
+        WHERE r.status IS NOT NULL
+        GROUP BY r.assessment.courseId
+        """;
+
+        List<Object[]> rows = entityManager.createQuery(jpql).getResultList();
+
+        return rows.stream()
+                .map(row -> new CoursePassFailStatsDTO(
+                        (UUID)   row[0],
+                        ((Number) row[1]).longValue(),
+                        ((Number) row[2]).longValue(),
+                        ((Number) row[3]).longValue()
                 ))
                 .toList();
     }

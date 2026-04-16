@@ -3,6 +3,7 @@ package com.ctx.report_service.service.impl;
 import com.ctx.report_service.dto.auth_principal.CurrentUser;
 import com.ctx.report_service.dto.common.GenericResponse;
 import com.ctx.report_service.dto.external.StudentResponse;
+import com.ctx.report_service.dto.external.assessment.CoursePassFailStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyAssessmentStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyExamStatsDTO;
 import com.ctx.report_service.dto.external.course.CourseCompletionStatsDTO;
@@ -100,6 +101,19 @@ public class ReportServiceImpl implements ReportService {
                 .bodyToFlux(CourseCompletionStatsDTO.class)
                 .collectList();
 
+    }
+
+    @Override
+    public Mono<List<CoursePassFailStatsDTO>> getCoursePassFailStats(String authHeader, CurrentUser user) {
+        return assessmentServiceClient.get()
+                .uri("/assessment/pass-fail-stats/by-course")
+                .header("Authorization", authHeader)
+                .header("X-User-Id",       user.getUserId().toString())
+                .header("X-User-Role",     user.getRole())
+                .header("X-User-username", user.getUsername())
+                .retrieve()
+                .bodyToFlux(CoursePassFailStatsDTO.class)
+                .collectList();
     }
 
 }

@@ -110,13 +110,20 @@ public class EnrollmentController {
     }
 
     @PatchMapping("/internal/student/{studentId}/course/{courseId}/final-grade")
-    public ResponseEntity<Void> updateFinalGrade(
+    public ResponseEntity<?> updateFinalGrade(
             @PathVariable UUID studentId,
             @PathVariable UUID courseId,
             @RequestBody FinalGradeUpdateRequest request
     ) {
         enrollmentService.updateFinalGrade(studentId, courseId, request.getFinalGrade());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        null,
+                        "updated the final grade",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
     }
 
 }
