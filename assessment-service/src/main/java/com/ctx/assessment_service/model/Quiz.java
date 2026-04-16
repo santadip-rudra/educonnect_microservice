@@ -25,6 +25,7 @@ public class Quiz {
     @OneToOne
     @JoinColumn(name = "assessment_id")
     @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Assessment assessment ;
 
     @OneToMany(mappedBy = "quiz")

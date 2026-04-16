@@ -57,9 +57,10 @@ public class EntityManagerRepo {
 
     public List<MonthlyEnrollmentStatsDTO> getMonthlyEnrollmentStats(){
         String jpql = """
-                    SELECT EXTRACT(YEAR FROM e.enrolledDate)
-                    SELECT EXTRACT(MONTH FROM e.enrolledDate)
-                    SELECT COUNT(e.enrollmentId)
+                    SELECT
+                        EXTRACT(YEAR FROM e.enrolledDate),
+                        EXTRACT(MONTH FROM e.enrolledDate),
+                        COUNT(e.enrollmentId)
                     FROM Enrollment e
                     WHERE e.enrolledDate IS NOT NULL
                     GROUP BY EXTRACT(YEAR FROM e.enrolledDate),EXTRACT(MONTH FROM e.enrolledDate)

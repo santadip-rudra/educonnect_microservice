@@ -113,14 +113,14 @@ public class ReportServiceImpl implements ReportService {
                 .header("X-User-Role",     user.getRole())
                 .header("X-User-username", user.getUsername())
                 .retrieve()
-                .bodyToFlux(CoursePassFailStatsDTO.class)
-                .collectList();
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<List<CoursePassFailStatsDTO>>>() {})
+                .map(GenericResponse::getData);
     }
 
     @Override
     public Mono<List<MonthlyEnrollmentStatsDTO>> getMonthlyEnrollmentStats(String authHeader, CurrentUser user) {
         return courseServiceClient.get()
-                .uri("/enrollment/stats/monthly")
+                .uri("/enroll/stats/monthly")
                 .header("Authorization", authHeader)
                 .header("X-User-Id",       user.getUserId().toString())
                 .header("X-User-Role",     user.getRole())
