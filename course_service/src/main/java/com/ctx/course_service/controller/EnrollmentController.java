@@ -2,6 +2,7 @@ package com.ctx.course_service.controller;
 
 import com.ctx.course_service.dto.common.GenericResponse;
 import com.ctx.course_service.dto.enrollment.FinalGradeUpdateRequest;
+import com.ctx.course_service.dto.enrollment.StudentCourseProgressDTO;
 import com.ctx.course_service.dto.enrollment.StudentCourseScoreDTO;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.service.contract.EnrollmentService;
@@ -133,6 +134,25 @@ public class EnrollmentController {
                 new GenericResponse<>(
                         enrollmentService.getMonthlyEnrollmentStats(),
                         "Monthly enrollment stats retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/student/courses/{studentId}/progress")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN') or hasRole('TEACHER') or hasRole('PARENT')")
+    public ResponseEntity<?> getProgressPerCourse(
+            @PathVariable("studentId") UUID studentId
+    ) {
+        List<StudentCourseProgressDTO> result =
+                moduleCompletionService.getProgressPerCourse(studentId);
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        result,
+                        result.isEmpty()
+                                ? "No enrollments found for this student"
+                                : "Progress retrieved successfully",
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
