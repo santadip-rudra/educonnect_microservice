@@ -2,6 +2,7 @@ package com.ctx.student_registry_service.services;
 
 import com.ctx.student_registry_service.client.CourseClient;
 import com.ctx.student_registry_service.client.StudentClient;
+import com.ctx.student_registry_service.dto.attendance.DailyAttendanceDTO;
 import com.ctx.student_registry_service.dto.course.CourseResponseDto;
 import com.ctx.student_registry_service.dto.student.StudentResponse;
 import com.ctx.student_registry_service.exceptions.custom.CourseNotFoundException;
@@ -15,7 +16,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import  com.ctx.student_registry_service.repos.AttendanceRepo;
 
@@ -49,7 +52,7 @@ public class AttendanceService {
                 .orElseThrow(()-> new StudentNotFoundException(studentId + " not found"));
         CourseResponseDto c = courseClient.findById(courseId).orElseThrow(()->new CourseNotFoundException("Course "+ courseId+ " not found")
         );
-        if(attendanceRepo.existsByStudentIdAndCourseIdAndDate(studentId,courseId, LocalDateTime.now())){
+        if(attendanceRepo.existsByStudentIdAndCourseIdAndToday(studentId,courseId)){
             return  true;
         }
         Attendance a =  Attendance.builder()
@@ -71,5 +74,54 @@ public class AttendanceService {
     }
     public List<Attendance> findByStudentIdAndCourseId(UUID studentId, UUID courseId) {
         return attendanceRepo.findByCourseAndAttendance(studentId,courseId);
+    }
+
+    public List<DailyAttendanceDTO> getAttendanceGroupedByDate(UUID studentId) {
+
+        List<Attendance> records = attendanceRepo.findByStudentId(studentId);
+
+        // Group records by calendar date (strip the time part)
+        Map<LocalDate, List<Attendance>> byDate = records.stream()
+                .collect(Collectors.groupingBy(a -> a.getDate().toLocalDate()));
+
+        return byDate.entrySet().stream()
+                .sorted(Map.Entry.<LocalDate, List<Attendance>>comparingByKey().reversed()) // newest first
+                .map(entry -> {
+                    LocalDate date = entry.getKey();
+                    List<Attendance> dayRecords = entry.getValue();
+
+                    List<DailyAttendanceDTO.CourseAttendanceDto> courses = dayRecords.stream()
+                            .map(a -> {
+                                // Resolve course name — fall back to UUID if Feign fails
+                                String courseName;
+                                String courseCode;
+                                try {
+                                    CourseResponseDto course = courseClient
+                                            .findById(a.getCourseId())
+                                            .orElse(null);
+                                    courseName = course != null ? course.title()  : a.getCourseId().toString();
+                                    courseCode = course != null ? course.courseCode() : "-";
+                                } catch (Exception e) {
+                                    courseName = a.getCourseId().toString();
+                                    courseCode = "-";
+                                }
+                                return new DailyAttendanceDTO.CourseAttendanceDto(
+                                        courseName,
+                                        courseCode,
+                                        a.getAttendanceStatus().name()
+                                );
+                            })
+                            .toList();
+
+                    // Build summary: "3 Present, 1 Absent"
+                    long presentCount = dayRecords.stream()
+                            .filter(a -> a.getAttendanceStatus() == AttendanceStatus.PRESENT)
+                            .count();
+                    long absentCount  = dayRecords.size() - presentCount;
+                    String summary = presentCount + " Present, " + absentCount + " Absent";
+
+                    return new DailyAttendanceDTO(date, summary, courses);
+                })
+                .toList();
     }
 }

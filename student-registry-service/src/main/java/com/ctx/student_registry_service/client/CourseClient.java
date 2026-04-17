@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.Optional;
 import java.util.UUID;
 
-@FeignClient(name = "course-service", url = "localhost:8081/course")
+@FeignClient(name = "course-service", path = "/course")
 public interface CourseClient {
     @GetMapping("/get-course/{courseId}")
     Optional<CourseResponseDto> findById(@PathVariable  UUID courseId);
