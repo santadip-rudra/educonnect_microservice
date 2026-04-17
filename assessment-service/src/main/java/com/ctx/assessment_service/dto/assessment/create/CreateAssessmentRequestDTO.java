@@ -42,5 +42,5 @@ public class CreateAssessmentRequestDTO {
 
     private LocalDate dueDate;
 
-
+    private Double weight;
 }

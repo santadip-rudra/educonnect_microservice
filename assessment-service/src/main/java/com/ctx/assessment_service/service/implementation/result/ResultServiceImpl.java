@@ -2,11 +2,19 @@ package com.ctx.assessment_service.service.implementation.result;
 
 import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
+import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
+import com.ctx.assessment_service.dto.assessment.result.StudentResultDTO;
+import com.ctx.assessment_service.dto.result.CoursePassFailStatsDTO;
+import org.springframework.transaction.annotation.Transactional;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.external_response.StudentResponse;
+import com.ctx.assessment_service.dto.result.ExamStatsDTO;
+import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
+import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
 import com.ctx.assessment_service.model.*;
+import com.ctx.assessment_service.repo.EntityManagerRepo;
 import com.ctx.assessment_service.repo.assessment.AssessmentRepo;
 import com.ctx.assessment_service.repo.assessment.SubmissionRepo;
 import com.ctx.assessment_service.repo.assessment.quiz.StudentQuizQuestionResponseRepo;
@@ -18,6 +26,7 @@ import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,6 +39,8 @@ public class ResultServiceImpl implements ResultService {
     //    private final StudentRepo studentRepo;
     private final ResultRepo resultRepo;
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
+
+    private final EntityManagerRepo entityManagerRepo;
 
     private final UserManagementServiceClient userManagementServiceClient;
     private final CourseServiceClient courseServiceClient;
@@ -61,6 +72,9 @@ public class ResultServiceImpl implements ResultService {
         result.setStatus(score >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
 
         resultRepo.save(result);
+
+        // Push updated average to course-service so Enrollment.finalGrade stays current.
+        pushAverageToCourseService(studentId, assessment.getCourseId());
 
         return "result computed successfully";
     }
@@ -96,6 +110,9 @@ public class ResultServiceImpl implements ResultService {
 
             resultRepo.save(result);
 
+            // Push updated average to course-service.
+            pushAverageToCourseService(studentId, assessment.getCourseId());
+
             return teacher.getUsername() + " updated the score of the assignment";
         }
 
@@ -121,7 +138,65 @@ public class ResultServiceImpl implements ResultService {
 
         resultRepo.save(result);
 
+        // Push updated average to course-service.
+        pushAverageToCourseService(studentId, assessment.getCourseId());
+
         return "Result of `" + student.getFullName() + "` [evaluated by `" + teacher.getUsername() + "`] saved successfully";
+    }
+
+    /**
+     * Computes the student's weighted average percentageScore across all Results they
+     * have for the given course, then calls course-service to persist it on
+     * Enrollment.finalGrade.
+     *
+     * Formula: sum(score x weight) / sum(weight)
+     *   - Only assessments the student has a Result for contribute to the sum.
+     *   - Ungraded assessments are excluded entirely (not treated as 0),
+     *     so the grade always reflects only what has actually been evaluated.
+     *
+     * Failure handling: if the Feign call fails (course-service down), we log and
+     * swallow -- the Result is already saved, so data is safe. Kafka is the
+     * production-grade upgrade path.
+     */
+    private void pushAverageToCourseService(UUID studentId, UUID courseId) {
+        try {
+            List<Assessment> courseAssessments = assessmentRepo.findByCourseId(courseId);
+            List<UUID> assessmentIds = courseAssessments.stream()
+                    .map(Assessment::getAssessmentId)
+                    .toList();
+
+            // Only include assessments the student has a Result for.
+            // Missing result = not yet graded, not a zero.
+            List<Result> studentResults = resultRepo.findAllByStudentId(studentId).stream()
+                    .filter(r -> r.getAssessment() != null
+                            && assessmentIds.contains(r.getAssessment().getAssessmentId()))
+                    .toList();
+
+            if (studentResults.isEmpty()) {
+                log.warn("No results found for studentId={} courseId={} - skipping finalGrade push", studentId, courseId);
+                return;
+            }
+
+            // Weighted average => sum(score x weight) / sum(weight)
+            double weightedScoreSum = studentResults.stream()
+                    .mapToDouble(r -> r.getPercentageScore() * r.getAssessment().getWeight())
+                    .sum();
+
+            double totalWeight = studentResults.stream()
+                    .mapToDouble(r -> r.getAssessment().getWeight())
+                    .sum();
+
+            double weightedAverage = (totalWeight == 0) ? 0.0 : weightedScoreSum / totalWeight;
+
+            courseServiceClient.updateFinalGrade(studentId, courseId, Map.of("finalGrade", weightedAverage));
+
+            log.info("Pushed weighted finalGrade={} for studentId={} courseId={} ({}/{} assessments graded)",
+                    weightedAverage, studentId, courseId, studentResults.size(), courseAssessments.size());
+
+        } catch (Exception e) {
+            log.error("Failed to push finalGrade to course-service for studentId={} courseId={}: {}",
+                    studentId, courseId, e.getMessage());
+        }
     }
 
     @Override
@@ -137,6 +212,46 @@ public class ResultServiceImpl implements ResultService {
 
         return resultRepo.findBySubmissionSubmissionId(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Result not found"));
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StudentResultDTO> getAllResultsByStudentId(UUID studentId, CurrentUser user) throws BadRequestException {
+        if (user.getRole().equals("STUDENT") && !user.getUserId().equals(studentId)) {
+            throw new BadRequestException("Not authorized to access these results");
+        }
+
+        List<Result> results = resultRepo.findAllByStudentId(studentId);
+
+        return results.stream().map(r -> StudentResultDTO.builder()
+                .resultId(r.getResultId())
+                .studentId(r.getStudentId())
+                .percentageScore(r.getPercentageScore())
+                .status(r.getStatus() != null ? r.getStatus().name() : null)
+                .assessmentId(r.getAssessment() != null ? r.getAssessment().getAssessmentId() : null)
+                .assessmentTitle(r.getAssessment() != null ? r.getAssessment().getTitle() : null)
+                .maxScore(r.getAssessment() != null ? r.getAssessment().getMaxScore() : null)
+                .assessmentType(r.getAssessment() != null ? r.getAssessment().getType().name() : null)
+                .courseId(r.getAssessment() != null ? r.getAssessment().getCourseId() : null)
+                .submissionId(r.getSubmission() != null ? r.getSubmission().getSubmissionId() : null)
+                .build()
+        ).toList();
+    }
+
+    @Override
+    public List<MonthlyExamStatsDTO> getMonthlyExamStats(){
+        return entityManagerRepo.getMonthlyExamStats();
+    }
+
+    @Override
+    public List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats(){
+        return entityManagerRepo.getMonthlyAssessmentAndSubmissionStats();
+    }
+
+    @Override
+    public List<CoursePassFailStatsDTO> getCoursePassFailStats() {
+        return entityManagerRepo.getCoursePassFailStats();
     }
 
 }

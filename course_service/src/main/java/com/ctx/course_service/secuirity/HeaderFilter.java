@@ -22,7 +22,7 @@ public class HeaderFilter extends OncePerRequestFilter {
 
         String userId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-role");
-        String username = request.getHeader("X-User-name");
+        String username = request.getHeader("X-User-username");
 
 
         if (

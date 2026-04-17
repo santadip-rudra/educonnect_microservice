@@ -8,16 +8,18 @@ import com.ctx.user_management_service.dto.register.base_user.UpdateUserDTO;
 import com.ctx.user_management_service.exceptions.custom.UserNotFoundException;
 import com.ctx.user_management_service.models.Parent;
 import com.ctx.user_management_service.repo.ParentRepo;
-import com.ctx.user_management_service.strategy.RegisterAndUpdateStrategy;
+import com.ctx.user_management_service.strategy.UserStrategy;
 import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class ParentRegisterAndUpdateStrategy implements RegisterAndUpdateStrategy {
+public class ParentUserStrategy implements UserStrategy {
 
     private final ParentRepo parentRepo;
 
@@ -54,5 +56,15 @@ public class ParentRegisterAndUpdateStrategy implements RegisterAndUpdateStrateg
         parent.setParentId(dto.getId());
         parentRepo.save(parent);
         return Map.of("message","User[Role: " + dto.getRole() + "] registered successfully");
+    }
+
+    @Override
+    public UserResponse getUserDetails(UUID userId) {
+        return null;
+    }
+
+    @Override
+    public List<UserResponse> getAllUser() {
+        return null;
     }
 }

@@ -2,11 +2,11 @@ package com.ctx.assessment_service.model;
 
 import com.ctx.assessment_service.model.enums.AssessmentType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -14,6 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class Assessment {
 
     @Id
@@ -31,10 +32,19 @@ public class Assessment {
     @Column(nullable = false)
     private UUID courseId;
 
+    @ToString.Exclude
     @OneToOne(mappedBy = "assessment")
     private Assignment assignment;
 
+    @ToString.Exclude
     @OneToOne(mappedBy = "assessment")
-    private  Quiz quiz;
+    private Quiz quiz;
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private Double weight = 1.0;
 
 }

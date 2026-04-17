@@ -8,16 +8,18 @@ import com.ctx.user_management_service.dto.teacher.TeacherResponse;
 import com.ctx.user_management_service.exceptions.custom.UserNotFoundException;
 import com.ctx.user_management_service.models.Teacher;
 import com.ctx.user_management_service.repo.TeacherRepo;
-import com.ctx.user_management_service.strategy.RegisterAndUpdateStrategy;
+import com.ctx.user_management_service.strategy.UserStrategy;
 import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class TeacherRegisterAndUpdateStrategy implements RegisterAndUpdateStrategy {
+public class TeacherUserStrategy implements UserStrategy {
     private final TeacherRepo teacherRepo;
 
     @Override
@@ -47,6 +49,24 @@ public class TeacherRegisterAndUpdateStrategy implements RegisterAndUpdateStrate
         teacher.setTeacherId(dto.getId());
         teacherRepo.save(teacher);
         return Map.of("message","User[Role: " + dto.getRole() + "] registered successfully");
+    }
+
+    @Override
+    public UserResponse getUserDetails(UUID userId) {
+        Teacher teacher = teacherRepo.findById(userId)
+                          .orElseThrow(()-> new UserNotFoundException("User not found"));
+
+        return TeacherResponse.builder()
+                .teacherId(userId)
+                .role("TEACHER")
+                .department(teacher.getDepartment())
+                .qualification(teacher.getQualification())
+                .build();
+    }
+
+    @Override
+    public List<UserResponse> getAllUser() {
+        return null;
     }
 
     private UserResponse mapToResponse(Teacher teacher) {

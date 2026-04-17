@@ -1,6 +1,7 @@
 package com.ctx.api_gateway.filters;
 
 import com.ctx.api_gateway.dto.AuthRequestDto;
+import com.ctx.api_gateway.dto.AuthResponseDto;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -51,8 +52,8 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     .onStatus(HttpStatusCode::isError, clientResponse ->
                             Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication Failed"))
                     )
-                    .bodyToMono(AuthRequestDto.class)
-                    .flatMap(userDto -> {
+                    .bodyToMono(AuthResponseDto.class)
+                    .flatMap(dto -> {
                         return chain.filter(exchange.mutate()
                                 .request(exchange.getRequest().mutate()
                                         .header("X-User-Id", userDto.getUserId() != null ? userDto.getUserId().toString() : "")

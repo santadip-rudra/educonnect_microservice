@@ -8,16 +8,20 @@ import com.ctx.user_management_service.dto.student.StudentResponse;
 import com.ctx.user_management_service.exceptions.custom.UserNotFoundException;
 import com.ctx.user_management_service.models.Student;
 import com.ctx.user_management_service.repo.StudentRepo;
-import com.ctx.user_management_service.strategy.RegisterAndUpdateStrategy;
+import com.ctx.user_management_service.strategy.UserStrategy;
 import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class StudentRegisterAndUpdateStrategy implements RegisterAndUpdateStrategy {
+public class StudentUserStrategy implements UserStrategy {
     private final StudentRepo studentRepo;
 
     @Override
@@ -61,5 +65,49 @@ public class StudentRegisterAndUpdateStrategy implements RegisterAndUpdateStrate
         student.setStudentId(dto.getId());
         studentRepo.save(student);
         return Map.of("message","User[Role: " + dto.getRole() + "] registered successfully");
+    }
+
+    @Override
+    public UserResponse getUserDetails(UUID userId) {
+        Student student = studentRepo.findByStudentId(userId)
+                .orElseThrow(()->new UserNotFoundException("Student not found"));
+        return StudentResponse.builder()
+                .studentId(userId)
+                .role("STUDENT")
+                .email(student.getEmail())
+                .fullName(student.getFullName())
+                .dateOfBirth(student.getDateOfBirth())
+                .enrollmentNumber(student.getEnrollmentNumber())
+                .isActive(student.getIsActive())
+                .parentEmail(student.getParentEmail())
+                .build();
+    }
+
+    @Override
+    public List<UserResponse> getAllUser() {
+        List<Student> studentList = studentRepo.findAll(Sort.by("fullName"));
+
+        if(studentList == null || studentList.isEmpty()){
+            throw new UserNotFoundException("Students not found");
+        }
+
+        List<UserResponse> studentResponseList = new ArrayList<>();
+
+        for(Student student : studentList){
+            studentResponseList.add(
+                    StudentResponse.builder()
+                            .role("STUDENT")
+                            .studentId(student.getStudentId())
+                            .fullName(student.getFullName())
+                            .email(student.getEmail())
+                            .dateOfBirth(student.getDateOfBirth())
+                            .enrollmentNumber(student.getEnrollmentNumber())
+                            .parentEmail(student.getParentEmail())
+                            .isActive(student.getIsActive())
+                            .build()
+            );
+        }
+
+        return studentResponseList;
     }
 }

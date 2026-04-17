@@ -2,6 +2,7 @@ package com.ctx.course_service.service.implementation;
 
 import com.ctx.course_service.clientCall.AssessmentClient;
 import com.ctx.course_service.clientCall.TeacherClient;
+import com.ctx.course_service.dto.CourseCompletionStatsDTO;
 import com.ctx.course_service.dto.CourseRequestDTO;
 import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
@@ -15,6 +16,7 @@ import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
 import com.ctx.course_service.repo.EnrollmentRepo;
+import com.ctx.course_service.repo.EntityManagerRepo;
 import com.ctx.course_service.service.contract.CourseService;
 import com.ctx.course_service.service.contract.EnrollmentService;
 import com.ctx.course_service.utils.mapper.CourseMapper;
@@ -42,6 +44,8 @@ public class CourseServiceImpl implements CourseService {
 
 
     private final CourseRepo courseRepo;
+
+    private final EntityManagerRepo entityManagerRepo;
 
     private final CourseMapper courseMapper;
 
@@ -191,5 +195,10 @@ public class CourseServiceImpl implements CourseService {
         }
 
         return courseResponseDTOList;
+    }
+
+    @Override
+    public List<CourseCompletionStatsDTO> getCourseCompletionStats(){
+        return entityManagerRepo.getCourseCompletionStats();
     }
 }

@@ -89,6 +89,7 @@ public class AssignmentStrategy implements AssessmentStrategy {
         assessment.setTitle(dto.getTitle());
         assessment.setType(dto.getAssessmentType());
         assessment.setMaxScore(dto.getMaxScore());
+        assessment.setWeight(dto.getWeight() != null && dto.getWeight() > 0 ? dto.getWeight() : 1.0);
 
         Assignment assignment = new Assignment();
         assignment.setDueDate(dto.getDueDate());

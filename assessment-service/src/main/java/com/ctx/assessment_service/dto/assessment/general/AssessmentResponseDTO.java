@@ -25,4 +25,6 @@ public class AssessmentResponseDTO {
     private UUID assignmentId;
 
     private UUID quizId;
+
+    private Double weight;
 }
