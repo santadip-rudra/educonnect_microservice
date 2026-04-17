@@ -62,7 +62,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                                         .build())
                                 .build());
                     });
-        };*
+        };
     }
 
     @Data
