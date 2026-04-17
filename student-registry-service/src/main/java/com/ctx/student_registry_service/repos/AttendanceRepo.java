@@ -20,8 +20,16 @@ public interface AttendanceRepo extends JpaRepository<Attendance, UUID> {
      * @param date The {@link LocalDate} of the class session.
      * @return true if a record exists, false otherwise.
      */
-    Boolean existsByStudentIdAndCourseIdAndDate(UUID s, UUID c, LocalDateTime date);
-
+    @Query("""
+            SELECT COUNT(a) > 0 FROM Attendance a
+            WHERE a.studentId = :studentId
+            AND a.courseId = :courseId
+            AND CAST(a.date AS date) = CAST(CURRENT_TIMESTAMP AS date)
+            """)
+    Boolean existsByStudentIdAndCourseIdAndToday(
+            @Param("studentId") UUID studentId,
+            @Param("courseId") UUID courseId
+    );
     /**
      * Retrieves all attendance records associated with a specific student.
      *

@@ -7,13 +7,14 @@ import com.ctx.student_registry_service.services.AttendanceService;
 import com.ctx.student_registry_service.utils.mapper.AttendanceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/v2/api/attendance")
+@RequestMapping("/attendance")
 @RequiredArgsConstructor
 public class AttendanceController {
 
@@ -45,5 +46,14 @@ public class AttendanceController {
             return ResponseEntity.ok(attendanceMapper.toListResponseDTO(attendanceService.findByStudentIdAndCourseId(studentId, courseId)));
         }
         return  ResponseEntity.badRequest().build();
+    }
+
+    @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasRole('PARENT') or hasRole('ADMIN') or hasRole('STUDENT')")
+    public ResponseEntity<?> getAttendanceForParent(
+            @PathVariable UUID studentId) {
+        return ResponseEntity.ok(
+                attendanceService.getAttendanceGroupedByDate(studentId)
+        );
     }
 }
