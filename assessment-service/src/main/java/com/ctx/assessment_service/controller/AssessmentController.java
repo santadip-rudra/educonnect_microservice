@@ -297,4 +297,17 @@ public class AssessmentController {
         );
     }
 
+    @GetMapping("/pass-fail-stats/by-course")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getCoursePassFailStats() {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        resultService.getCoursePassFailStats(),
+                        "Pass/fail stats retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
 }
