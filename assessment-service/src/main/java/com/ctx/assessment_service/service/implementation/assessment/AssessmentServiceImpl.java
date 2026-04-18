@@ -66,7 +66,7 @@ public class AssessmentServiceImpl implements AssessmentService {
                     .assessmentId(assessment.getAssessmentId())
                     .type(assessment.getType().toString())
                     .quizId(assessment.getQuiz() != null ? assessment.getQuiz().getQuizId() : null)
-                    .assignmentId(assessment.getAssignment() != null? assessment.getAssignment().getAssignmentId() : null)
+                    .assignmentId(assessment.getAssignment() != null ? assessment.getAssignment().getAssignmentId() : null)
                     .title(assessment.getTitle())
                     .maxScore(assessment.getMaxScore())
                     .courseId(assessment.getCourseId())

@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.*;
 
 @Slf4j
@@ -184,6 +185,7 @@ public class AssignmentStrategy implements AssessmentStrategy {
                 .assessment(assessment)
                 .studentId(student.getUserId())
                 .submissionStatus(SubmissionStatus.NOT_SUBMITTED)
+                .startedAt(Instant.now())
                 .build();
 
         submission = submissionRepo.save(submission);
