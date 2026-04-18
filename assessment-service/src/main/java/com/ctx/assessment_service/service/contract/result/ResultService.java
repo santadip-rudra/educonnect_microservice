@@ -2,6 +2,7 @@ package com.ctx.assessment_service.service.contract.result;
 
 
 
+import com.ctx.assessment_service.dto.result.CoursePassFailStatsDTO;
 import com.ctx.assessment_service.dto.result.ExamStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
@@ -53,5 +54,7 @@ public interface ResultService {
     List<MonthlyExamStatsDTO> getMonthlyExamStats();
 
     List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats();
+
+    List<CoursePassFailStatsDTO> getCoursePassFailStats();
 }
 

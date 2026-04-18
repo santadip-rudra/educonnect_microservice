@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -92,5 +94,14 @@ public class DocumentController {
 
         response.setContentType(contentType);
         StreamUtils.copy(inputStream,response.getOutputStream());
+    }
+
+    @PreAuthorize("hasRole('STUDENT')")
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<Map<String, String>>> getStudentDocuments(
+            @PathVariable UUID studentId) {
+        return ResponseEntity.ok(
+                studentDocumentService.getAllDocumentsByStudent(studentId)
+        );
     }
 }

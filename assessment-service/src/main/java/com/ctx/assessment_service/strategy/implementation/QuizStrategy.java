@@ -33,7 +33,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
-import org.jetbrains.annotations.NotNull;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -151,6 +151,7 @@ public class QuizStrategy implements AssessmentStrategy {
     }
 
     @Override
+    @Transactional
     public AssessmentServeDTO serveAssessment(UUID assessmentId, CurrentUser user) throws BadRequestException {
 
         if (user.getRole().equals("STUDENT")) {
@@ -361,10 +362,20 @@ public class QuizStrategy implements AssessmentStrategy {
         // DELETE the draft
         quizDraftAnswerRepo.deleteAllBySubmissionId(submission.getSubmissionId());
 
-        submission.setSubmissionStatus(SubmissionStatus.SUBMITTED);
-        submissionRepo.save(submission);
+         // if submission occurs twice for some reason,
+        // or if a previous attempt partially committed before a rollback,
+        // we don't hit the unique constraint.
+        List<StudentQuizQuestionResponse> existingResponses =
+                studentQuizQuestionResponseRepo.findAllBySubmission(submission);
+        if (!existingResponses.isEmpty()) {
+            studentQuizQuestionResponseRepo.deleteAll(existingResponses);
+            studentQuizQuestionResponseRepo.flush();
+        }
 
         studentQuizQuestionResponseRepo.saveAll(studentQuizQuestionResponseList);
+
+        submission.setSubmissionStatus(SubmissionStatus.SUBMITTED);
+        submissionRepo.save(submission);
 
         String msg = resultService.computeQuizResult(assessment.getAssessmentId(), student.getUserId());
         log.info("Message from resultService : {}", msg);
@@ -380,53 +391,60 @@ public class QuizStrategy implements AssessmentStrategy {
     }
 
     @Override
+    @Transactional
     public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
 
         Optional<Submission> existing =
-                submissionRepo.findByStudentIdAndAssessmentAssessmentId(user.getUserId(),assessmentId);
+                submissionRepo.findByStudentIdAndAssessmentAssessmentId(user.getUserId(), assessmentId);
 
         if (existing.isPresent()) {
-            Submission s = existing.get();
-
-            List<QuizDraftAnswer> drafts =
-                    quizDraftAnswerRepo.findAllBySubmissionSubmissionId(s.getSubmissionId());
-
-            List<SavedAnswerDTO> savedAnswers = drafts.stream()
-                    .map(d -> SavedAnswerDTO.builder()
-                            .questionId(d.getQuestionId().toString())
-                            .selectedOptionIds(
-                                    Arrays.asList(d.getSelectedOptionIds().split(","))
-                            )
-                            .build())
-                    .toList();
-
-            return QuizSessionResponseDTO.builder()
-                    .submissionId(s.getSubmissionId())
-                    .startedAt(s.getStartedAt().toString())
-                    .durationMinutes(s.getAssessment().getQuiz().getDurationMinutes())
-                    .savedAnswers(savedAnswers)
-                    .isResumed(true)
-                    .build();
+            return buildSessionResponse(existing.get());
         }
 
         Assessment assessment = assessmentRepo.findById(assessmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
 
-        Submission submission = Submission.builder()
-                .assessment(assessment)
-                .studentId(user.getUserId())
-                .submissionStatus(SubmissionStatus.IN_PROGRESS)
-                .startedAt(Instant.now())
-                .build();
+        Submission submission;
+        try {
+            submission = Submission.builder()
+                    .assessment(assessment)
+                    .studentId(user.getUserId())
+                    .submissionStatus(SubmissionStatus.IN_PROGRESS)
+                    .startedAt(Instant.now())
+                    .build();
+            submissionRepo.saveAndFlush(submission);
 
-        submissionRepo.save(submission);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Race condition on startSession for studentId={} assessmentId={} — fetching existing session",
+                    user.getUserId(), assessmentId);
+            submission = submissionRepo
+                    .findByStudentIdAndAssessmentAssessmentId(user.getUserId(), assessmentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Session could not be created or found"));
+        }
+
+        return buildSessionResponse(submission);
+    }
+
+    private QuizSessionResponseDTO buildSessionResponse(Submission s) {
+        List<QuizDraftAnswer> drafts =
+                quizDraftAnswerRepo.findAllBySubmissionSubmissionId(s.getSubmissionId());
+
+        List<SavedAnswerDTO> savedAnswers = drafts.stream()
+                .map(d -> SavedAnswerDTO.builder()
+                        .questionId(d.getQuestionId().toString())
+                        .selectedOptionIds(Arrays.asList(d.getSelectedOptionIds().split(",")))
+                        .build())
+                .toList();
+
+        boolean isResumed = !savedAnswers.isEmpty()
+                || s.getSubmissionStatus() == SubmissionStatus.IN_PROGRESS;
 
         return QuizSessionResponseDTO.builder()
-                .submissionId(submission.getSubmissionId())
-                .startedAt(submission.getStartedAt().toString())
-                .durationMinutes(assessment.getQuiz().getDurationMinutes())
-                .savedAnswers(Collections.emptyList())
-                .isResumed(false)
+                .submissionId(s.getSubmissionId())
+                .startedAt(s.getStartedAt().toString())
+                .durationMinutes(s.getAssessment().getQuiz().getDurationMinutes())
+                .savedAnswers(savedAnswers)
+                .isResumed(isResumed)
                 .build();
     }
 

@@ -6,6 +6,7 @@ import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 import com.ctx.course_service.dto.assessment.AssessmentResponseDTO;
 import com.ctx.course_service.dto.enrollment.EnrollmentResponseDTOServe;
+import com.ctx.course_service.dto.enrollment.MonthlyEnrollmentStatsDTO;
 import com.ctx.course_service.dto.enrollment.StudentCourseScoreDTO;
 import com.ctx.course_service.dto.external_response.StudentResponse;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
@@ -15,6 +16,7 @@ import com.ctx.course_service.model.CourseModule;
 import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.repo.CourseRepo;
 import com.ctx.course_service.repo.EnrollmentRepo;
+import com.ctx.course_service.repo.EntityManagerRepo;
 import com.ctx.course_service.service.contract.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
@@ -31,6 +33,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     private final CourseRepo courseRepo;
     private final EnrollmentRepo enrollmentRepo;
+    private final EntityManagerRepo entityManagerRepo;
     private final UserManagementServiceClient userManagementServiceClient;
     private final AssessmentClient assessmentClient;
 
@@ -208,5 +211,10 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         }
 
         return courseResponseDTOList;
+    }
+
+    @Override
+    public List<MonthlyEnrollmentStatsDTO> getMonthlyEnrollmentStats() {
+        return entityManagerRepo.getMonthlyEnrollmentStats();
     }
 }

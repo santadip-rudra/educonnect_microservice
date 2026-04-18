@@ -1,5 +1,6 @@
 package com.ctx.course_service.service.implementation;
 
+import com.ctx.course_service.dto.enrollment.StudentCourseProgressDTO;
 import com.ctx.course_service.exceptions.custom_exceptions.ResourceNotFoundException;
 import com.ctx.course_service.model.Course;
 import com.ctx.course_service.model.CourseModule;
@@ -7,20 +8,21 @@ import com.ctx.course_service.model.Enrollment;
 import com.ctx.course_service.model.ModuleCompletion;
 import com.ctx.course_service.repo.CourseModuleRepo;
 import com.ctx.course_service.repo.EnrollmentRepo;
-import com.ctx.course_service.repo.ModuleCompletionRepository;
+import com.ctx.course_service.repo.ModuleCompletionRepo;
 import com.ctx.course_service.service.contract.ModuleCompletionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ModuleCompletionServiceImpl implements ModuleCompletionService {
 
-    private final ModuleCompletionRepository moduleCompletionRepo;
+    private final ModuleCompletionRepo moduleCompletionRepo;
     private final EnrollmentRepo enrollmentRepo;
     private final CourseModuleRepo moduleRepo;
 
@@ -65,5 +67,64 @@ public class ModuleCompletionServiceImpl implements ModuleCompletionService {
         }
 
         enrollmentRepo.save(enrollment);
+    }
+
+    @Override
+    @Transactional
+    public List<StudentCourseProgressDTO> getProgressPerCourse(UUID studentId) {
+        List<Enrollment> enrollments = enrollmentRepo.findByStudentId(studentId);
+
+        return enrollments.stream()
+                .map(enrollment -> toProgressDTO(enrollment, studentId))
+                .toList();
+    }
+
+    private StudentCourseProgressDTO toProgressDTO(Enrollment enrollment, UUID studentId) {
+        Course course = enrollment.getCourse();
+
+        List<ModuleCompletion> completions =
+                moduleCompletionRepo.findByEnrollmentWithModule(enrollment);
+
+        // using set for o(1) lookup
+        Set<UUID> completedModuleIds = completions.stream()
+                .map(mc -> mc.getModule().getModuleId())
+                .collect(Collectors.toSet());
+
+        Map<UUID, LocalDate> completedAtByModuleId = completions.stream()
+                .collect(Collectors.toMap(
+                        mc -> mc.getModule().getModuleId(),
+                        ModuleCompletion::getCompletedAt
+                ));
+
+        List<StudentCourseProgressDTO.ModuleProgressDTO> moduleProgressList = course.getModules()
+                .stream()
+                .sorted(Comparator.comparingInt(CourseModule::getSequenceOrder))
+                .map(module -> {
+                    boolean completed = completedModuleIds.contains(module.getModuleId());
+                    return StudentCourseProgressDTO.ModuleProgressDTO.builder()
+                            .moduleId(module.getModuleId())
+                            .title(module.getTitle())
+                            .sequenceOrder(module.getSequenceOrder())
+                            .duration(module.getDuration())
+                            .completed(completed)
+                            .completedAt(completed
+                                    ? completedAtByModuleId.get(module.getModuleId())
+                                    : null)
+                            .build();
+                })
+                .toList();
+
+        return StudentCourseProgressDTO.builder()
+                .courseId(course.getCourseId())
+                .courseTitle(course.getTitle())
+                .courseCode(course.getCourseCode())
+                .progress(enrollment.getProgress())
+                .finalGrade(enrollment.getFinalGrade())
+                .remainingDuration(enrollment.getRemainingDuration())
+                .isActive(enrollment.isActive())
+                .enrolledDate(enrollment.getEnrolledDate())
+                .completedDate(enrollment.getCompletedDate())
+                .moduleProgress(moduleProgressList)
+                .build();
     }
 }

@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-@FeignClient(name = "user-management-service", url = "localhost:8081/student")
+@FeignClient(name = "user-management-service", path = "/student")
 public interface StudentClient {
     @GetMapping("{studentId}")
     Optional<StudentResponse> findByStudentId(@PathVariable UUID studentId);

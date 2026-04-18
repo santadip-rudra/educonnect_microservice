@@ -1,5 +1,6 @@
 package com.ctx.student_registry_service.dto.student;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +14,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class StudentResponse {
+
+    @JsonProperty("userId")
     private UUID studentId;
+
     private String fullName;
     private String email;
     private LocalDate dateOfBirth;

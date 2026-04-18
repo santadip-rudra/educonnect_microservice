@@ -4,6 +4,7 @@ import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
 import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.result.StudentResultDTO;
+import com.ctx.assessment_service.dto.result.CoursePassFailStatsDTO;
 import org.springframework.transaction.annotation.Transactional;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.external_response.StudentResponse;
@@ -246,6 +247,11 @@ public class ResultServiceImpl implements ResultService {
     @Override
     public List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats(){
         return entityManagerRepo.getMonthlyAssessmentAndSubmissionStats();
+    }
+
+    @Override
+    public List<CoursePassFailStatsDTO> getCoursePassFailStats() {
+        return entityManagerRepo.getCoursePassFailStats();
     }
 
 }

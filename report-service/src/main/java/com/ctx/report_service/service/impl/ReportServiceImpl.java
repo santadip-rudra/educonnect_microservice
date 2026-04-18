@@ -3,10 +3,12 @@ package com.ctx.report_service.service.impl;
 import com.ctx.report_service.dto.auth_principal.CurrentUser;
 import com.ctx.report_service.dto.common.GenericResponse;
 import com.ctx.report_service.dto.external.StudentResponse;
+import com.ctx.report_service.dto.external.assessment.CoursePassFailStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyAssessmentStatsDTO;
 import com.ctx.report_service.dto.external.assessment.MonthlyExamStatsDTO;
 import com.ctx.report_service.dto.external.course.CourseCompletionStatsDTO;
 import com.ctx.report_service.dto.external.course.CourseResponseDTO;
+import com.ctx.report_service.dto.external.course.MonthlyEnrollmentStatsDTO;
 import com.ctx.report_service.dto.report.EnrollmentReportDTO;
 import com.ctx.report_service.service.contract.ReportService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -100,6 +102,32 @@ public class ReportServiceImpl implements ReportService {
                 .bodyToFlux(CourseCompletionStatsDTO.class)
                 .collectList();
 
+    }
+
+    @Override
+    public Mono<List<CoursePassFailStatsDTO>> getCoursePassFailStats(String authHeader, CurrentUser user) {
+        return assessmentServiceClient.get()
+                .uri("/assessment/pass-fail-stats/by-course")
+                .header("Authorization", authHeader)
+                .header("X-User-Id",       user.getUserId().toString())
+                .header("X-User-Role",     user.getRole())
+                .header("X-User-username", user.getUsername())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<List<CoursePassFailStatsDTO>>>() {})
+                .map(GenericResponse::getData);
+    }
+
+    @Override
+    public Mono<List<MonthlyEnrollmentStatsDTO>> getMonthlyEnrollmentStats(String authHeader, CurrentUser user) {
+        return courseServiceClient.get()
+                .uri("/enroll/stats/monthly")
+                .header("Authorization", authHeader)
+                .header("X-User-Id",       user.getUserId().toString())
+                .header("X-User-Role",     user.getRole())
+                .header("X-User-username", user.getUsername())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<List<MonthlyEnrollmentStatsDTO>>>() {})
+                .map(GenericResponse::getData);
     }
 
 }
