@@ -25,6 +25,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -102,5 +103,20 @@ public class StudentDoctypeService {
         InputStream inputStream = new ByteArrayInputStream(fileByteData);
 
         return new DocStreamDto(inputStream,document);
+    }
+
+    public List<Map<String, String>> getAllDocumentsByStudent(UUID studentId) {
+        List<StudentDocument> docs = studentDocumentRepo.findAllByStudentId(studentId);
+
+        return docs.stream().map(doc -> {
+            Map<String, String> map = new HashMap<>();
+            map.put("documentId", doc.getStudentDocumentId().toString());
+            map.put("fileName", doc.getFileName());
+            map.put("docType", doc.getDocType().getDocTypeName().name());
+            map.put("viewUri", doc.getFileUri());
+            map.put("uploadedDate", doc.getUploadedDate() != null ? doc.getUploadedDate().toString() : "");
+            map.put("verificationStatus", doc.getVerificationStatus().name());
+            return map;
+        }).toList();
     }
 }
