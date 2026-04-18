@@ -48,3 +48,6 @@ src/main/resources/application-secret.properties
 
 #ignore logs
 logs
+
+# Ignore VS Code workspace files
+*.code-workspace

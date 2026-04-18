@@ -2,6 +2,7 @@ package com.ctx.student_registry_service.client.interceptor;
 
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -9,14 +10,33 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Component
 public class FeignClientInterceptor implements RequestInterceptor {
+
     @Override
     public void apply(RequestTemplate requestTemplate) {
-       ServletRequestAttributes requestAttr = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-       if(requestAttr!=null){
-           String authHeader = requestAttr.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
-           if(authHeader!=null && authHeader.startsWith("Bearer ")){
-               requestTemplate.header(HttpHeaders.AUTHORIZATION,authHeader);
-           }
-       }
+        ServletRequestAttributes requestAttributes = (ServletRequestAttributes)
+                RequestContextHolder.getRequestAttributes();
+
+        if (requestAttributes != null) {
+            HttpServletRequest request = requestAttributes.getRequest();
+
+            // 1. Forward the Bearer Token (Good for general security)
+            String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (authHeader != null) {
+                requestTemplate.header(HttpHeaders.AUTHORIZATION, authHeader);
+            }
+
+            // 2. Forward the Custom Headers (Required for your HeaderFilter)
+            forwardHeader("X-User-Id", request, requestTemplate);
+            forwardHeader("X-User-role", request, requestTemplate);
+            forwardHeader("X-User-username", request, requestTemplate);
+        }
     }
+
+    private void forwardHeader(String headerName, HttpServletRequest request, RequestTemplate template) {
+        String headerValue = request.getHeader(headerName);
+        if (headerValue != null) {
+            template.header(headerName, headerValue);
+        }
+    }
+
 }
