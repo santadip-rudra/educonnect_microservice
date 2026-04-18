@@ -53,7 +53,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                             Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication Failed"))
                     )
                     .bodyToMono(AuthResponseDto.class)
-                    .flatMap(dto -> {
+                    .flatMap(userDto -> {
                         return chain.filter(exchange.mutate()
                                 .request(exchange.getRequest().mutate()
                                         .header("X-User-Id", userDto.getUserId() != null ? userDto.getUserId().toString() : "")
