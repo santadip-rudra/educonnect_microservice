@@ -2,7 +2,10 @@ package com.ctx.assessment_service.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -12,6 +15,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class Quiz {
 
     @Id
@@ -21,6 +25,7 @@ public class Quiz {
     @OneToOne
     @JoinColumn(name = "assessment_id")
     @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Assessment assessment ;
 
     @OneToMany(mappedBy = "quiz")
@@ -34,4 +39,8 @@ public class Quiz {
 
     @JoinColumn(nullable = true)
     private Double durationMinutes;
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

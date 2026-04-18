@@ -19,6 +19,7 @@ import com.ctx.assessment_service.factory.AssessmentFactory;
 import com.ctx.assessment_service.model.Assessment;
 import com.ctx.assessment_service.service.contract.assessment.AssessmentService;
 import com.ctx.assessment_service.service.contract.image.ImageService;
+import com.ctx.assessment_service.service.contract.result.ResultService;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.ctx.assessment_service.model.Result;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,6 +50,7 @@ import java.util.*;
 public class AssessmentController {
     private final AssessmentFactory assessmentFactory;
     private final AssessmentService assessmentService;
+    private final ResultService resultService;
     private final ImageService imageService;
     /**
      *
@@ -260,4 +263,51 @@ public class AssessmentController {
                 )
         );
     }
+
+    @GetMapping("/results/student/{studentId}")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getStudentResults(
+            @PathVariable UUID studentId,
+            @AuthenticationPrincipal CurrentUser user) throws BadRequestException {
+
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        resultService.getAllResultsByStudentId(studentId, user),
+                        "Results retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/monthly-exam-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyExamStats(){
+        return ResponseEntity.ok(
+                resultService.getMonthlyExamStats()
+        );
+    }
+
+    @GetMapping("/monthly-assessment-submission-stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyAssessmentAndSubmissionStats(){
+        return ResponseEntity.ok(
+                resultService.getMonthlyAssessmentAndSubmissionStats()
+        );
+    }
+
+    @GetMapping("/pass-fail-stats/by-course")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getCoursePassFailStats() {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        resultService.getCoursePassFailStats(),
+                        "Pass/fail stats retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
 }

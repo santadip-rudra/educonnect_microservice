@@ -1,8 +1,12 @@
 package com.ctx.course_service.controller;
 
 import com.ctx.course_service.dto.common.GenericResponse;
+import com.ctx.course_service.dto.enrollment.FinalGradeUpdateRequest;
+import com.ctx.course_service.dto.enrollment.StudentCourseProgressDTO;
+import com.ctx.course_service.dto.enrollment.StudentCourseScoreDTO;
 import com.ctx.course_service.enrollment.EnrollmentResponseDTO;
 import com.ctx.course_service.service.contract.EnrollmentService;
+import com.ctx.course_service.service.contract.ModuleCompletionService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +24,7 @@ import java.util.UUID;
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+    private final ModuleCompletionService moduleCompletionService;
 
     @PostMapping("course/{courseId}/student/{studentId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('TEACHER')")
@@ -28,12 +33,12 @@ public class EnrollmentController {
             @PathVariable("courseId") UUID courseId
     ) throws BadRequestException {
         return ResponseEntity.ok(
-          new GenericResponse<>(
-               enrollmentService.enrollStudentToCourse(studentId,courseId),
-               "Student enrolled to the course successfully",
-                  HttpStatus.CREATED.value(),
-                  LocalDateTime.now()
-          )
+                new GenericResponse<>(
+                        enrollmentService.enrollStudentToCourse(studentId,courseId),
+                        "Student enrolled to the course successfully",
+                        HttpStatus.CREATED.value(),
+                        LocalDateTime.now()
+                )
         );
     }
 
@@ -69,4 +74,89 @@ public class EnrollmentController {
                 )
         );
     }
+
+    @PatchMapping("/mark-as-complete/{moduleId}")
+    public ResponseEntity<?> markModuleAsComplete(
+            @RequestHeader("X-User-Id") UUID studentId,
+            @RequestHeader("X-User-username") String username,
+            @PathVariable("moduleId") UUID moduleId
+    ) {
+        moduleCompletionService.markModuleAsComplete(studentId, moduleId);
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        moduleId + "is marked as completed for " + username,
+                        "module marked as completed successfully!",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/student/courses/by-score/{studentId}")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN') or hasRole('TEACHER') or hasRole('PARENT')")
+    public ResponseEntity<GenericResponse<List<StudentCourseScoreDTO>>> getCoursesSortedByScore(
+            @PathVariable("studentId") UUID studentId
+    ) {
+        List<StudentCourseScoreDTO> result = enrollmentService.getCoursesSortedByScoreForStudent(studentId);
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        result,
+                        result.isEmpty()
+                                ? "No enrollments found for this student"
+                                : "Courses retrieved and sorted by score successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @PatchMapping("/internal/student/{studentId}/course/{courseId}/final-grade")
+    public ResponseEntity<?> updateFinalGrade(
+            @PathVariable UUID studentId,
+            @PathVariable UUID courseId,
+            @RequestBody FinalGradeUpdateRequest request
+    ) {
+        enrollmentService.updateFinalGrade(studentId, courseId, request.getFinalGrade());
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        null,
+                        "updated the final grade",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/stats/monthly")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getMonthlyEnrollmentStats() {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.getMonthlyEnrollmentStats(),
+                        "Monthly enrollment stats retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @GetMapping("/student/courses/{studentId}/progress")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN') or hasRole('TEACHER') or hasRole('PARENT')")
+    public ResponseEntity<?> getProgressPerCourse(
+            @PathVariable("studentId") UUID studentId
+    ) {
+        List<StudentCourseProgressDTO> result =
+                moduleCompletionService.getProgressPerCourse(studentId);
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        result,
+                        result.isEmpty()
+                                ? "No enrollments found for this student"
+                                : "Progress retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
 }

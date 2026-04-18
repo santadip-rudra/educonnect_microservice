@@ -13,6 +13,7 @@ import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -59,6 +60,11 @@ public class ParentUserStrategy implements UserStrategy {
 
     @Override
     public UserResponse getUserDetails(UUID userId) {
+        return null;
+    }
+
+    @Override
+    public List<UserResponse> getAllUser() {
         return null;
     }
 }
