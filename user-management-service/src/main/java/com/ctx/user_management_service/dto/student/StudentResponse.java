@@ -2,6 +2,7 @@ package com.ctx.user_management_service.dto.student;
 
 import com.ctx.user_management_service.dto.base_useer_response.UserResponse;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @SuperBuilder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class StudentResponse extends UserResponse {
+    @JsonProperty("userId")
     private UUID studentId;
     private String fullName;
     private String email;

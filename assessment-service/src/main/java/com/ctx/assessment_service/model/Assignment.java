@@ -2,12 +2,12 @@ package com.ctx.assessment_service.model;
 
 import com.ctx.assessment_service.model.attachment.assignment.AssignmentAttachment;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +16,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class Assignment {
 
     @Id
@@ -24,6 +25,7 @@ public class Assignment {
 
     @OneToOne
     @JoinColumn(name = "assessment_id")
+    @ToString.Exclude
     private Assessment assessment ;
 
     private LocalDate dueDate;
@@ -34,5 +36,9 @@ public class Assignment {
 
     @OneToMany(mappedBy = "assignment")
     List<AssignmentAttachment> assignmentAttachmentList;
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
 }

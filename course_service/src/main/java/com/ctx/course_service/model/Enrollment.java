@@ -9,6 +9,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.ctx.course_service.model.EnrollmentStatus;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 @Builder
 @Entity
@@ -48,4 +50,10 @@ public class Enrollment {
 
     @CreatedDate
     private LocalDate enrolledDate;
+
+    @Column
+    private LocalDate completedDate;
+
+    @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL)
+    private List<ModuleCompletion> moduleCompletions = new ArrayList<>();
 }

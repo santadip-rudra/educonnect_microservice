@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -19,10 +18,11 @@ public class ParentAccessServiceImpl implements ParentAccessService {
     private final ParentVerificationTokenRepo tokenRepo;
     @Override
     public void linkParent(UUID parentId, UUID studentId){
+        tokenRepo.findByParentIdAndVerifiedTrue(parentId)
+                .orElseThrow(() -> new RuntimeException("Parent is not verified. Please complete email verification before linking."));
         mappingRepo.findByParentIdAndStudentId(parentId,studentId)
                 .ifPresent(m->{throw new RuntimeException("Already linked");
                 });
-        //TO CHECK
         ParentStudentMapping mapping=new ParentStudentMapping();
         mapping.setParentId(parentId);
         mapping.setStudentId(studentId);
@@ -30,6 +30,10 @@ public class ParentAccessServiceImpl implements ParentAccessService {
     }
     @Override
     public String sendVerification(UUID parentId){
+        tokenRepo.findByParentIdAndVerifiedTrue(parentId)
+                .ifPresent(existing -> {
+                    throw new RuntimeException("Parent is already verified.");
+                });
         tokenRepo.findByParentId(parentId)
                 .ifPresent(tokenRepo::delete);
         String token=UUID.randomUUID().toString();
@@ -39,13 +43,26 @@ public class ParentAccessServiceImpl implements ParentAccessService {
                 expiryDate(LocalDateTime.now().plusHours(24)).
                 build();
         tokenRepo.save(verificationToken);
-        return "http://localhost:8081/parent/verify?token="+token;
+        return "http://localhost:8081/parent-access/verify?token="+token;
     }
     @Override
     public void verifyParent(String token){
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Invalid or already used token");
+        }
         ParentVerificationToken verificationToken=tokenRepo.findByToken(token).
-                orElseThrow(()->new RuntimeException("Invalid token"));
-        tokenRepo.delete(verificationToken);
+                orElseThrow(()->new RuntimeException("Invalid or already used token"));
+        if(verificationToken.isVerified()){
+            throw new RuntimeException("Parent is already verified.");
+        }
+        if(verificationToken.getExpiryDate().isBefore(LocalDateTime.now())){
+            tokenRepo.delete(verificationToken);
+            throw new RuntimeException("Verification token has expired. Please request a new one.");
+        }
+        verificationToken.setVerified(true);
+        verificationToken.setToken(null);
+        verificationToken.setExpiryDate(null);
+        tokenRepo.save(verificationToken);
     }
     @Override
     public boolean getAccess(UUID parentId,UUID studentId){
@@ -54,10 +71,11 @@ public class ParentAccessServiceImpl implements ParentAccessService {
 
     @Override
     public void grantAccess(UUID parentId,UUID studentId){
-        mappingRepo.findByParentIdAndStudentId(parentId, studentId).
-                ifPresent(m->{
-                    throw new RuntimeException("Access already granted");
-                });
+        tokenRepo.findByParentIdAndVerifiedTrue(parentId)
+                .orElseThrow(() -> new RuntimeException("Parent is not verified. Please complete email verification before granting access."));
+        if(mappingRepo.findByParentIdAndStudentId(parentId, studentId).isPresent()){
+            return;
+        }
         ParentStudentMapping parentStudentMapping=new ParentStudentMapping();
         parentStudentMapping.setParentId(parentId);
         parentStudentMapping.setStudentId(studentId);

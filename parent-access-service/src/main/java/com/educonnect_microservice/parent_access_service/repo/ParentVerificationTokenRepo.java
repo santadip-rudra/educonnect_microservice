@@ -11,4 +11,6 @@ public interface ParentVerificationTokenRepo extends JpaRepository<ParentVerific
     Optional<ParentVerificationToken> findByToken(String token);
 
     Optional<ParentVerificationToken> findByParentId(UUID parentId);
+
+    Optional<ParentVerificationToken> findByParentIdAndVerifiedTrue(UUID parentId);
 }

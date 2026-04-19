@@ -24,4 +24,5 @@ public class ParentVerificationToken {
     private UUID parentId;
     private String token;
     private LocalDateTime expiryDate;
+    private boolean verified;
 }

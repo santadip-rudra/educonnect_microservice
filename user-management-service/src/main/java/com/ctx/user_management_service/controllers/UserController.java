@@ -45,7 +45,7 @@ public class UserController {
 
     @GetMapping("/{userRole}/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<UserResponse>> getAllUser(
+    public ResponseEntity<?> getAllUser(
             @PathVariable("userRole") String userRole
     ){
         return ResponseEntity.ok(
