@@ -17,4 +17,8 @@ public interface EnrollmentService {
     List<EnrollmentResponseDTO> getAllEnrollmentsByStudent(UUID studentId);
 
     List<CourseResponseDTO> getAllCoursesWithModulesAndEnrollments();
+
+    EnrollmentResponseDTO selfEnroll(UUID studentId, UUID courseId) throws BadRequestException;
+    EnrollmentResponseDTO approveEnrollment(UUID enrollmentId) throws BadRequestException;
+    EnrollmentResponseDTO rejectEnrollment(UUID enrollmentId) throws BadRequestException;
 }

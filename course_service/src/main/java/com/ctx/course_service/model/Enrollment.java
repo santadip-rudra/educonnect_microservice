@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import com.ctx.course_service.model.EnrollmentStatus;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -40,6 +41,10 @@ public class Enrollment {
     private Double progress;
 
     private Double finalGrade;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private EnrollmentStatus enrollmentStatus = EnrollmentStatus.PENDING;
 
     @CreatedDate
     private LocalDate enrolledDate;

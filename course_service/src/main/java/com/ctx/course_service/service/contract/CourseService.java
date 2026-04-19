@@ -7,6 +7,7 @@ import com.ctx.course_service.dto.CourseResponseDTO;
 import com.ctx.course_service.dto.ModuleResponseDTO;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface CourseService{
