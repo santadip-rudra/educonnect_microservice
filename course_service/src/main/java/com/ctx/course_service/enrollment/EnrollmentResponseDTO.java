@@ -1,20 +1,22 @@
 package com.ctx.course_service.enrollment;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder; // Add this
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor; // Good practice for DTOs
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor // Added for better compatibility
-@Builder          // This generates the builder() method for you
+@NoArgsConstructor
+@Builder
 public class EnrollmentResponseDTO {
+    private UUID enrollmentId;
     private String courseName;
-    private String studentName; // Changed to lowercase 's' (Java convention)
+    private String studentName;
     private String courseDescription;
     private Double durationInSec;
     private UUID courseId;
+    private String enrollmentStatus;
 }

@@ -20,6 +20,10 @@ public interface EnrollmentService {
 
     List<CourseResponseDTO> getAllCoursesWithModulesAndEnrollments();
 
+    EnrollmentResponseDTO selfEnroll(UUID studentId, UUID courseId) throws BadRequestException;
+    EnrollmentResponseDTO approveEnrollment(UUID enrollmentId) throws BadRequestException;
+    EnrollmentResponseDTO rejectEnrollment(UUID enrollmentId) throws BadRequestException;
+
     void updateFinalGrade(UUID studentId, UUID courseId, Double finalGrade);
 
     List<StudentCourseScoreDTO> getCoursesSortedByScoreForStudent(UUID studentId);
