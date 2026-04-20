@@ -6,6 +6,7 @@ import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
+import com.ctx.assessment_service.dto.submission.StudentSubmissionSummaryDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
 import com.ctx.assessment_service.model.enums.AssessmentType;
@@ -149,5 +150,16 @@ public interface AssessmentStrategy {
 
     default void saveAnswer(UUID submissionId, UUID questionId, List<UUID> selectedOptionIds) throws BadRequestException {
         throw new BadRequestException("saveAnswer not supported for this assessment type");
+    }
+
+    // only for assignments
+    default Map<String, String> resubmitAssessment(CurrentUser student, AssessmentRequestDTO dto)
+            throws BadRequestException, DocumentProcessingException {
+        throw new BadRequestException("Resubmission is not supported for this assessment type");
+    }
+
+    default List<StudentSubmissionSummaryDTO> getSubmissionSummaries(UUID assessmentId, CurrentUser teacher)
+            throws BadRequestException {
+        throw new BadRequestException("Submission summaries are not supported for this assessment type");
     }
 }

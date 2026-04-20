@@ -9,6 +9,7 @@ import com.ctx.assessment_service.dto.assessment.report.assignment.StudentAssign
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.assignment.AssignmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
+import com.ctx.assessment_service.dto.submission.StudentSubmissionSummaryDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.submit.assignment.AssignmentRequestDTO;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 @Slf4j
@@ -134,6 +136,27 @@ public class AssignmentStrategy implements AssessmentStrategy {
         serveDTO.setTitle(assessment.getTitle());
         serveDTO.setNoOfDocumentsToBeUploaded(assignment.getNoOfDocumentsToBeUploaded());
         serveDTO.setAssessmentType(AssessmentType.ASSIGNMENT);
+        serveDTO.setAssessmentId(assessmentId);
+        serveDTO.setAssignmentId(assignment.getAssignmentId());
+        serveDTO.setDueDate(assignment.getDueDate());
+
+        if (user.getRole().equals("STUDENT")) {
+            Optional<Submission> existing = submissionRepo
+                    .findByStudentIdAndAssessmentAssessmentId(user.getUserId(), assessmentId);
+
+            existing.ifPresent(submission -> {
+                serveDTO.setSubmissionStatus(submission.getSubmissionStatus().name());
+                serveDTO.setSubmissionId(submission.getSubmissionId().toString());
+                serveDTO.setAttemptCount(submission.getAttemptCount());
+
+                List<String> uris = assignmentAttachmentRepo
+                        .findAllBySubmissionSubmissionId(submission.getSubmissionId())
+                        .stream()
+                        .map(a -> gatewayBaseUrl + "/attachment/view/" + a.getAttachmentId())
+                        .toList();
+                serveDTO.setAttachmentUris(uris);
+            });
+        }
 
         return serveDTO;
     }
@@ -157,11 +180,16 @@ public class AssignmentStrategy implements AssessmentStrategy {
         if (submissionRepo.existsByStudentIdAndAssessmentAssessmentId(
                 student.getUserId(), assessment.getAssessmentId())) {
             throw new BadRequestException("Student `" + student.getUsername()
-                    + "` has already submitted this assignment");
+                    + "` has already submitted this assignment. Use resubmit if deadline hasn't passed.");
         }
 
-        Assignment assignment = assignmentRepo.findById(assignmentDTO.getAssignmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+        Assignment assignment = assignmentRepo.findById(assessment.getAssignment().getAssignmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment " + assessment.getAssignment().getAssignmentId() + " not found"));
+
+        if (LocalDate.now().isAfter(assignment.getDueDate())) {
+            throw new BadRequestException(
+                    "Submission deadline has passed. Due date was: " + assignment.getDueDate());
+        }
 
         List<MultipartFile> files = assignmentDTO.getFiles();
 
@@ -169,16 +197,13 @@ public class AssignmentStrategy implements AssessmentStrategy {
             throw new DocumentProcessingException("No files were attached to the submission");
         }
 
-        int required = assignment.getNoOfDocumentsToBeUploaded();
-        int uploaded = files.size();
-
-        if (uploaded > required) {
+        if (files.size() > assignment.getNoOfDocumentsToBeUploaded()) {
             throw new DocumentProcessingException(
-                    "Maximum of " + required + " attachments allowed");
-        }
-        if (uploaded < required) {
+                    "Maximum of " + assignment.getNoOfDocumentsToBeUploaded() + " attachments allowed");
+        } else if(files.size() < assignment.getNoOfDocumentsToBeUploaded()){
             throw new DocumentProcessingException(
-                    "Please upload " + (required - uploaded) + " more attachment(s)");
+                    "You did not submitted " + assignment.getNoOfDocumentsToBeUploaded() + " documents"
+            );
         }
 
         Submission submission = Submission.builder()
@@ -186,29 +211,12 @@ public class AssignmentStrategy implements AssessmentStrategy {
                 .studentId(student.getUserId())
                 .submissionStatus(SubmissionStatus.NOT_SUBMITTED)
                 .startedAt(Instant.now())
+                .isLate(LocalDate.now().isAfter(assignment.getDueDate()))
                 .build();
 
         submission = submissionRepo.save(submission);
 
-        List<AssignmentAttachment> attachments = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            try {
-                AssignmentAttachment attachment = new AssignmentAttachment();
-                attachment.setAttachmentId(UUID.randomUUID());
-                attachment.setAssignment(assignment);
-                attachment.setSubmission(submission);
-                attachment.setFileData(file.getBytes());
-                attachment.setDescription(dto.getDescription());
-                attachment.setFileName(file.getOriginalFilename());
-                attachment.setFileTypeEnum(getFileType(file.getOriginalFilename()));
-                attachments.add(attachment);
-            } catch (Exception e) {
-                log.error("Failed to process file: {}", file.getOriginalFilename(), e);
-                throw new DocumentProcessingException(
-                        "Failed to process file: " + file.getOriginalFilename());
-            }
-        }
+        List<AssignmentAttachment> attachments = buildAttachments(files, assignment, submission, dto.getDescription());
 
         submission.setSubmissionStatus(SubmissionStatus.SUBMITTED);
         submissionRepo.save(submission);
@@ -218,6 +226,104 @@ public class AssignmentStrategy implements AssessmentStrategy {
                 "message", "Assignment submitted successfully",
                 "submissionId", submission.getSubmissionId().toString()
         );
+    }
+
+    @Override
+    @Transactional
+    public Map<String, String> resubmitAssessment(CurrentUser student,
+                                                  AssessmentRequestDTO dto) throws BadRequestException, DocumentProcessingException {
+
+        AssignmentRequestDTO assignmentDTO = (AssignmentRequestDTO) dto;
+
+        Assessment assessment = assessmentRepo.findById(dto.getAssessmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
+
+        Assignment assignment = assignmentRepo.findById(assessment.getAssignment().getAssignmentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+
+        // resubmit is only allowed before the due date
+        if (LocalDate.now().isAfter(assignment.getDueDate())) {
+            throw new BadRequestException(
+                    "Cannot resubmit — deadline has passed. Due date was: " + assignment.getDueDate());
+        }
+
+        Submission submission = submissionRepo
+                .findByStudentIdAndAssessmentAssessmentId(student.getUserId(), assessment.getAssessmentId())
+                .orElseThrow(() -> new BadRequestException(
+                        "No existing submission found. Please use submit instead."));
+
+        if (!submission.getSubmissionStatus().equals(SubmissionStatus.SUBMITTED)) {
+            throw new BadRequestException("Cannot resubmit — current submission is not in SUBMITTED state.");
+        }
+
+        List<MultipartFile> files = assignmentDTO.getFiles();
+
+        if (files == null || files.isEmpty()) {
+            throw new DocumentProcessingException("No files were attached to the resubmission");
+        }
+
+        if (files.size() > assignment.getNoOfDocumentsToBeUploaded()) {
+            throw new DocumentProcessingException(
+                    "Maximum of " + assignment.getNoOfDocumentsToBeUploaded() + " attachments allowed");
+        } else if(files.size() < assignment.getNoOfDocumentsToBeUploaded()){
+            throw new DocumentProcessingException(
+                    "You did not submitted " + assignment.getNoOfDocumentsToBeUploaded() + " documents"
+            );
+        }
+
+        List<AssignmentAttachment> oldAttachments =
+                assignmentAttachmentRepo.findAllBySubmissionSubmissionId(submission.getSubmissionId());
+        assignmentAttachmentRepo.deleteAll(oldAttachments);
+        assignmentAttachmentRepo.flush();
+
+        List<AssignmentAttachment> newAttachments =
+                buildAttachments(files, assignment, submission, dto.getDescription());
+
+        assignmentAttachmentRepo.saveAll(newAttachments);
+
+
+        submission.setAttemptCount(submission.getAttemptCount() + 1);
+        submissionRepo.save(submission);
+
+        return Map.of(
+                "message", "Assignment resubmitted successfully",
+                "submissionId", submission.getSubmissionId().toString(),
+                "attemptCount", submission.getAttemptCount().toString()
+        );
+    }
+
+
+    @Override
+    public List<StudentSubmissionSummaryDTO> getSubmissionSummaries(UUID assessmentId,
+                                                                    CurrentUser teacher) throws BadRequestException {
+
+        Assessment assessment = assessmentRepo.findById(assessmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
+
+        CourseResponse course = courseServiceClient.getcourse(assessment.getCourseId());
+
+        if (course == null || !course.getTeacherId().equals(teacher.getUserId())) {
+            throw new BadRequestException("Teacher `" + teacher.getUsername()
+                    + "` is not authorized to view submissions for this assessment");
+        }
+
+        List<Submission> submissions = submissionRepo.findAllByAssessmentId(assessmentId);
+
+        return submissions.stream()
+                .map(sub -> StudentSubmissionSummaryDTO.builder()
+                        .submissionId(sub.getSubmissionId())
+                        .studentId(sub.getStudentId())
+                        .submissionStatus(sub.getSubmissionStatus().name())
+                        .isLate(sub.getIsLate())
+                        .attemptCount(sub.getAttemptCount())
+                        .attachmentCount(
+                                sub.getAssignmentAttachmentList() != null
+                                        ? sub.getAssignmentAttachmentList().size()
+                                        : 0
+                        )
+                        .submittedAt(sub.getCreatedAt())
+                        .build())
+                .toList();
     }
 
     @Override
@@ -242,19 +348,51 @@ public class AssignmentStrategy implements AssessmentStrategy {
         return null;
     }
 
+    private List<AssignmentAttachment> buildAttachments(
+            List<MultipartFile> files,
+            Assignment assignment,
+            Submission submission,
+            String description) throws DocumentProcessingException {
+
+        List<AssignmentAttachment> attachments = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            try {
+                AssignmentAttachment attachment = new AssignmentAttachment();
+                attachment.setAttachmentId(UUID.randomUUID());
+                attachment.setAssignment(assignment);
+                attachment.setSubmission(submission);
+                attachment.setFileData(file.getBytes());
+                attachment.setDescription(description);
+                attachment.setFileName(file.getOriginalFilename());
+                attachment.setFileTypeEnum(getFileType(file.getOriginalFilename()));
+                attachments.add(attachment);
+            } catch (Exception e) {
+                log.error("Failed to process file: {}", file.getOriginalFilename(), e);
+                throw new DocumentProcessingException(
+                        "Failed to process file: " + file.getOriginalFilename());
+            }
+        }
+
+        return attachments;
+    }
+
     private StudentAssignmentReportDTO buildReportDTO(Submission submission) {
         StudentAssignmentReportDTO report = new StudentAssignmentReportDTO();
 
         List<String> urls = submission.getAssignmentAttachmentList()
                 .stream()
-                .map(a -> gatewayBaseUrl + "/attachment/view/"
-                        + a.getAttachmentId())
+                .map(a -> gatewayBaseUrl + "/attachment/view/" + a.getAttachmentId())
                 .toList();
 
         report.setAttachmentUriList(urls);
         report.setTitle(submission.getAssessment().getTitle());
         report.setAssessmentType(AssessmentType.ASSIGNMENT);
         report.setNoOfDocumentsUploaded(submission.getAssignmentAttachmentList().size());
+
+        report.setDueDate(submission.getAssessment().getAssignment().getDueDate());
+        report.setIsLate(submission.getIsLate());
+        report.setAttemptCount(submission.getAttemptCount());
 
         return report;
     }

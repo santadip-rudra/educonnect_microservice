@@ -4,6 +4,7 @@ import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestD
 import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.session.quiz.QuizSessionResponseDTO;
+import com.ctx.assessment_service.dto.submission.StudentSubmissionSummaryDTO;
 import com.ctx.assessment_service.dto.assessment.submit.AssessmentRequestDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
@@ -20,15 +21,12 @@ import java.util.UUID;
 
 /**
  * Factory method responsible for routing the assessment creation & submission request
- * * <p> It dynamically selects & return the correct {@link AssessmentStrategy}( either Assignment or Quiz) based on the {@link AssessmentType}</p>
- *
+ * <p> It dynamically selects & returns the correct {@link AssessmentStrategy} (either Assignment or Quiz) based on the {@link AssessmentType}</p>
  *
  * @author SudipSarkar
- * @version 1.0
+ * @version 2.0
  * @since 1.0
  */
-
-
 @Component
 @RequiredArgsConstructor
 public class AssessmentFactory {
@@ -152,5 +150,35 @@ public class AssessmentFactory {
 
         resolve(parseType(assessmentType))
                 .saveAnswer(submissionId, questionId, selectedOptionIds);
+    }
+
+    /**
+     * <p>Routes the resubmit request to the appropriate strategy</p>
+     * @param student              the student resubmitting
+     * @param assessmentRequestDTO the payload (same structure as submit)
+     * @return A success message with updated attemptCount
+     */
+    public Map<String, String> resubmitAssessment(
+            CurrentUser student,
+            AssessmentRequestDTO assessmentRequestDTO) throws BadRequestException, DocumentProcessingException {
+
+        return resolve(assessmentRequestDTO.getAssessmentType())
+                .resubmitAssessment(student, assessmentRequestDTO);
+    }
+
+    /**
+     * <p>Returns a summary of all student submissions for a given assignment (teacher only)</p>
+     * @param assessmentId   the assignment's assessment ID
+     * @param assessmentType raw type string from the path variable
+     * @param teacher        the authenticated teacher
+     * @return list of submission summaries
+     */
+    public List<StudentSubmissionSummaryDTO> getSubmissionSummaries(
+            UUID assessmentId,
+            String assessmentType,
+            CurrentUser teacher) throws BadRequestException {
+
+        return resolve(parseType(assessmentType))
+                .getSubmissionSummaries(assessmentId, teacher);
     }
 }
