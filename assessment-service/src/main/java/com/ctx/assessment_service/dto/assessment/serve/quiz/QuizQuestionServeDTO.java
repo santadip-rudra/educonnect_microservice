@@ -11,4 +11,5 @@ public class QuizQuestionServeDTO {
     private String questionText;
     private String imageUri;
     private List<QuestionOptionServeDTO> questionOptionServeDTOList;
+    private Integer marks;
 }

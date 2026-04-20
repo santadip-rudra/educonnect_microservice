@@ -375,4 +375,29 @@ public class AssessmentController {
         );
     }
 
+    // ── [ADDED] rollback endpoint — called by frontend when image uploads fail ──
+    /**
+     * @param assessmentId   the assessment to delete
+     * @param assessmentType the type (QUIZ or ASSIGNMENT)
+     * @param teacher        the authenticated teacher — must own the course
+     */
+    @DeleteMapping("/{assessmentType}/{assessmentId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<GenericResponse<Map<String, String>>> deleteAssessment(
+            @PathVariable("assessmentId") UUID assessmentId,
+            @PathVariable("assessmentType") String assessmentType,
+            @AuthenticationPrincipal CurrentUser teacher
+    ) throws BadRequestException {
+
+        assessmentFactory.deleteAssessment(assessmentId, assessmentType, teacher);
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        Map.of("message", "Assessment deleted successfully"),
+                        "Assessment deleted",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
 }

@@ -29,12 +29,15 @@ import com.ctx.assessment_service.repo.assessment.quiz.*;
 import com.ctx.assessment_service.service.contract.image.ImageService;
 import com.ctx.assessment_service.service.contract.result.ResultService;
 import com.ctx.assessment_service.strategy.contract.AssessmentStrategy;
-import jakarta.transaction.Transactional;
+
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
@@ -61,6 +64,9 @@ public class QuizStrategy implements AssessmentStrategy {
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
     private final ResultService resultService;
     private final ImageService imageService;
+
+    private final EntityManager entityManager;
+
     // private final EnrollmentRepo enrollmentRepo;
 
     private final CourseServiceClient courseServiceClient;
@@ -121,6 +127,7 @@ public class QuizStrategy implements AssessmentStrategy {
                     Question.builder()
                             .questionText(quizQuestionDTO.getQuestionText())
                             .quiz(quiz)
+                            .marks(quizQuestionDTO.getMarks())
                             .build();
 
             questionList.add(question);
@@ -188,6 +195,7 @@ public class QuizStrategy implements AssessmentStrategy {
                             = new QuizQuestionServeDTO();
                     qDto.setQuizQuestionId(question.getQuestionId());
                     qDto.setQuestionText(question.getQuestionText());
+                    qDto.setMarks(question.getMarks());
                     qDto.setImageUri(
                             question.getHasImage() == null? null :
                                     imageService.generateImageUri("question",question.getQuestionId())
@@ -391,7 +399,7 @@ public class QuizStrategy implements AssessmentStrategy {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
 
         Optional<Submission> existing =
@@ -411,15 +419,27 @@ public class QuizStrategy implements AssessmentStrategy {
                     .studentId(user.getUserId())
                     .submissionStatus(SubmissionStatus.IN_PROGRESS)
                     .startedAt(Instant.now())
+                    .attemptCount(1)
+                    .isLate(false)
                     .build();
+
             submissionRepo.saveAndFlush(submission);
 
         } catch (DataIntegrityViolationException e) {
-            log.warn("Race condition on startSession for studentId={} assessmentId={} — fetching existing session",
-                    user.getUserId(), assessmentId);
+            // two requests raced — the other one already inserted the row.
+            // REQUIRES_NEW means this transaction is already rolled back,
+            // so the re-query reads the committed row from the winning request.
+            log.warn(
+                    "Race condition on startSession for studentId={} assessmentId={} — fetching existing session",
+                    user.getUserId(), assessmentId
+            );
+
+            entityManager.clear();
+
             submission = submissionRepo
                     .findByStudentIdAndAssessmentAssessmentId(user.getUserId(), assessmentId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Session could not be created or found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Session could not be created or found"));
         }
 
         return buildSessionResponse(submission);
@@ -478,5 +498,25 @@ public class QuizStrategy implements AssessmentStrategy {
                             .build()
             );
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteAssessment(UUID assessmentId, CurrentUser teacher) throws BadRequestException {
+
+        Assessment assessment = assessmentRepo.findById(assessmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
+
+        CourseResponse course = courseServiceClient.getcourse(assessment.getCourseId());
+
+        if (course == null || !canCreateAssessment(teacher.getUserId(), course.getTeacherId())) {
+            throw new BadRequestException("Teacher `" + teacher.getUsername()
+                    + "` is not authorized to delete this assessment");
+        }
+
+        assessmentRepo.deleteById(assessmentId);
+
+        log.info("Assessment {} deleted by teacher {} (rollback)",
+                assessmentId, teacher.getUsername());
     }
 }

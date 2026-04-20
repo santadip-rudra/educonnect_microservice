@@ -162,4 +162,6 @@ public interface AssessmentStrategy {
             throws BadRequestException {
         throw new BadRequestException("Submission summaries are not supported for this assessment type");
     }
+
+    void deleteAssessment(UUID assessmentId, CurrentUser teacher) throws BadRequestException;
 }

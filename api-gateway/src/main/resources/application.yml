@@ -5,6 +5,10 @@ spring:
   application:
     name: api-gateway
 
+
+  codec:
+    max-in-memory-size: 300MB
+
   cloud:
     gateway:
       globalcors:
@@ -19,6 +23,13 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
+      httpclient:
+        pool:
+          max-connections: 500
+
+      filter:
+        adapt-cached-body:
+          enabled: false
 
       routes:
         # 1. Auth Service (no AuthFilter needed)

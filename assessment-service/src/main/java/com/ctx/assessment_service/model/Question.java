@@ -13,6 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Question {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID questionId;
@@ -23,7 +24,7 @@ public class Question {
     @JoinColumn(name = "quiz_id")
     private Quiz quiz;
 
-    @OneToMany(mappedBy = "question")
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Set<QuestionOption> questionOptionList;
@@ -44,4 +45,6 @@ public class Question {
     @Column(nullable = true)
     private String imageFileName;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
+    private Integer marks;
 }
