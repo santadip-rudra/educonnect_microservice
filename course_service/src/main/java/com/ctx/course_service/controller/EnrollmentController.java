@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.ctx.course_service.dto.user.CurrentUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,7 +63,7 @@ public class EnrollmentController {
     }
 
 
-    @GetMapping("student/{studentId}")
+    @GetMapping("student/{studentId}/all")
     public ResponseEntity<GenericResponse<List<EnrollmentResponseDTO>>> getStudentEnrollments(
             @PathVariable("studentId") UUID studentId
     ) {
@@ -69,6 +71,52 @@ public class EnrollmentController {
                 new GenericResponse<>(
                         enrollmentService.getAllEnrollmentsByStudent(studentId),
                         "Student enrollments retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @PostMapping("/self/{courseId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<GenericResponse<EnrollmentResponseDTO>> selfEnroll(
+            @PathVariable("courseId") UUID courseId,
+            @AuthenticationPrincipal CurrentUser user
+    ) throws BadRequestException {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.selfEnroll(user.getUserId(), courseId),
+                        "Enrollment request submitted successfully",
+                        HttpStatus.CREATED.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @PatchMapping("/{enrollmentId}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<GenericResponse<EnrollmentResponseDTO>> approveEnrollment(
+            @PathVariable UUID enrollmentId
+    ) throws BadRequestException {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.approveEnrollment(enrollmentId),
+                        "Enrollment approved",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @PatchMapping("/{enrollmentId}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<GenericResponse<EnrollmentResponseDTO>> rejectEnrollment(
+            @PathVariable UUID enrollmentId
+    ) throws BadRequestException {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        enrollmentService.rejectEnrollment(enrollmentId),
+                        "Enrollment rejected",
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
