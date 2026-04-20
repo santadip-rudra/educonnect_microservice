@@ -35,6 +35,7 @@ public class Quiz {
 
 
     @OneToMany(mappedBy = "quiz")
+    @ToString.Exclude
     private List<StudentQuizQuestionResponse> studentQuizResponseList;
 
     @JoinColumn(nullable = true)
