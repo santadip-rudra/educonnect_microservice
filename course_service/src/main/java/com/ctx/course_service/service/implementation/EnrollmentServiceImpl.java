@@ -21,6 +21,7 @@ import com.ctx.course_service.service.contract.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
+import com.ctx.course_service.model.EnrollmentStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,11 +60,13 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         enrollmentRepo.save(enrollment);
 
         return new EnrollmentResponseDTO(
+                enrollment.getEnrollmentId(),
                 course.getTitle(),
                 student.getFullName(),
                 course.getDescription(),
                 course.getDuration(),
-                course.getCourseId()
+                course.getCourseId(),
+                enrollment.getEnrollmentStatus().name()
         );
     }
 
@@ -94,11 +97,13 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             // 3. Map to DTO
             return enrollments.stream()
                     .map(enrollment -> new EnrollmentResponseDTO(
+                            enrollment.getEnrollmentId(),
                             enrollment.getCourse() != null ? enrollment.getCourse().getTitle() : "Unknown Course",
                             student.getFullName(),
                             enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "",
                             enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0,
-                            enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null
+                            enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null,
+                            enrollment.getEnrollmentStatus() != null ? enrollment.getEnrollmentStatus().name() : "PENDING"
                     ))
                     .collect(Collectors.toList());
 
@@ -216,5 +221,78 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     public List<MonthlyEnrollmentStatsDTO> getMonthlyEnrollmentStats() {
         return entityManagerRepo.getMonthlyEnrollmentStats();
+    }
+
+    @Override
+    public EnrollmentResponseDTO selfEnroll(UUID studentId, UUID courseId) throws BadRequestException {
+        Course course = courseRepo.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found!"));
+
+        if (isStudentEnrolledToTheCourse(studentId, courseId)) {
+            throw new BadRequestException("You already have a pending or active enrollment for this course.");
+        }
+
+        Enrollment enrollment = Enrollment.builder()
+                .course(course)
+//                .isActive(false)
+                .isActive(true)
+                .studentId(studentId)
+                .remainingDuration(course.getDuration())
+                .progress(0.0)
+//                .enrollmentStatus(EnrollmentStatus.PENDING)
+                .enrollmentStatus(EnrollmentStatus.APPROVED)
+                .build();
+
+        enrollmentRepo.save(enrollment);
+
+        return new EnrollmentResponseDTO(
+                enrollment.getEnrollmentId(),
+                course.getTitle(),
+                "",
+                course.getDescription(),
+                course.getDuration(),
+                course.getCourseId(),
+                "PENDING"
+        );
+    }
+
+    @Override
+    public EnrollmentResponseDTO approveEnrollment(UUID enrollmentId) throws BadRequestException {
+        Enrollment enrollment = enrollmentRepo.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment not found"));
+
+        enrollment.setEnrollmentStatus(EnrollmentStatus.APPROVED);
+        enrollment.setActive(true);
+        enrollmentRepo.save(enrollment);
+
+        return new EnrollmentResponseDTO(
+                enrollment.getEnrollmentId(),
+                enrollment.getCourse().getTitle(),
+                "",
+                enrollment.getCourse().getDescription(),
+                enrollment.getCourse().getDuration(),
+                enrollment.getCourse().getCourseId(),
+                "APPROVED"
+        );
+    }
+
+    @Override
+    public EnrollmentResponseDTO rejectEnrollment(UUID enrollmentId) throws BadRequestException {
+        Enrollment enrollment = enrollmentRepo.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment not found"));
+
+        enrollment.setEnrollmentStatus(EnrollmentStatus.REJECTED);
+        enrollment.setActive(false);
+        enrollmentRepo.save(enrollment);
+
+        return new EnrollmentResponseDTO(
+                enrollment.getEnrollmentId(),
+                enrollment.getCourse().getTitle(),
+                "",
+                enrollment.getCourse().getDescription(),
+                enrollment.getCourse().getDuration(),
+                enrollment.getCourse().getCourseId(),
+                "REJECTED"
+        );
     }
 }

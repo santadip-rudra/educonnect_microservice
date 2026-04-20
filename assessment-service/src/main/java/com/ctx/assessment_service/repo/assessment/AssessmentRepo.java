@@ -13,6 +13,10 @@ import java.util.UUID;
 public interface AssessmentRepo extends JpaRepository<Assessment, UUID> {
     List<Assessment> findByCourseId(UUID courseId);
 
-    @Query("SELECT a FROM Assessment a WHERE a.courseId IN ?1")
+    @Query("""
+            SELECT a FROM Assessment a
+            LEFT JOIN FETCH a.submissionList sl
+            WHERE a.courseId IN ?1
+            """)
     List<Assessment> findByCoursesId(List<UUID> courseIds);
 }

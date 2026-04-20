@@ -2,6 +2,7 @@ package com.ctx.assessment_service.dto.assessment.general;
 
 import com.ctx.assessment_service.model.Assignment;
 import com.ctx.assessment_service.model.Quiz;
+import com.ctx.assessment_service.model.SubmissionStatus;
 import com.ctx.assessment_service.model.enums.AssessmentType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -27,4 +28,6 @@ public class AssessmentResponseDTO {
     private UUID quizId;
 
     private Double weight;
+
+    private SubmissionStatus submissionStatus;
 }
