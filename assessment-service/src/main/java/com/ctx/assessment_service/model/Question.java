@@ -27,10 +27,6 @@ public class Question {
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    // FIX: was Set<QuestionOption> with no ordering — option A/B/C/D could appear in
-    // any order each time. The frontend assigns letter badges (A, B, C…) by index position,
-    // so shuffled options produce wrong letter labels on every page load.
-    @@jakarta.persistence.OrderBy(clause = "questionOptionId ASC")
     private Set<QuestionOption> questionOptionList;
 
     @OneToMany(mappedBy = "question")
@@ -49,13 +45,20 @@ public class Question {
     @Column(nullable = true)
     private String imageFileName;
 
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
+    // nullable to stay compatible with existing rows
+    @Column(nullable = true)
     private Integer marks;
 
+    // [ADDED] true if teacher marked more than one option as correct.
+    // Computed at creation time in QuizStrategy — not set by the teacher directly.
+    // Tells the frontend to render checkboxes instead of radio buttons.
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     @Builder.Default
     private Boolean isMultiOption = false;
 
+    // [ADDED] only relevant when isMultiOption = true.
+    // false → student must select ALL correct options or gets 0 for the question.
+    // true  → student gets (correctSelected / totalCorrect) × marks (partial credit).
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     @Builder.Default
     private Boolean isPartMarkingAllowed = false;

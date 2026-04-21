@@ -29,7 +29,6 @@ import com.ctx.assessment_service.repo.assessment.quiz.*;
 import com.ctx.assessment_service.service.contract.image.ImageService;
 import com.ctx.assessment_service.service.contract.result.ResultService;
 import com.ctx.assessment_service.strategy.contract.AssessmentStrategy;
-
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,14 +46,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 /**
- * Implementation of AssignmentStrategy for {@link AssessmentType} QUIZ
+ * Implementation of AssessmentStrategy for {@link AssessmentType} QUIZ
  * @author SudipSarkar
  * @version 1.0
  * @since 1.0
  */
 public class QuizStrategy implements AssessmentStrategy {
 
-    //private final CourseRepo courseRepo;
     private final QuizRepo quizRepo;
     private final QuestionRepo questionRepo;
     private final QuestionOptionRepo questionOptionRepo;
@@ -64,67 +62,64 @@ public class QuizStrategy implements AssessmentStrategy {
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
     private final ResultService resultService;
     private final ImageService imageService;
-
     private final EntityManager entityManager;
-
-    // private final EnrollmentRepo enrollmentRepo;
-
     private final CourseServiceClient courseServiceClient;
     private final UserManagementServiceClient userManagementServiceClient;
-
 
     @Override
     public boolean supports(AssessmentType type) {
         return type.toString().equals("QUIZ") || type.toString().equals("QUIZ_SUBMISSION");
     }
 
+    // ── createAssessment ──────────────────────────────────────────────────────
 
     @Override
     @Transactional
-    public Map<String,String> createAssessment(CurrentUser teacher, CreateAssessmentRequestDTO assessmentRequestDTO) throws BadRequestException {
+    public Map<String, String> createAssessment(CurrentUser teacher,
+                                                CreateAssessmentRequestDTO assessmentRequestDTO) throws BadRequestException {
 
         CourseResponse course = courseServiceClient.getcourse(assessmentRequestDTO.getCourseId());
 
-        if(course == null){
+        if (course == null) {
             throw new ResourceNotFoundException("Course not found");
         }
 
-        if(!canCreateAssessment(teacher.getUserId(),course.getTeacherId())){
-            throw new BadRequestException("Teacher " + teacher.getUsername() +" can't add assessment to this course " + course.getTitle());
+        if (!canCreateAssessment(teacher.getUserId(), course.getTeacherId())) {
+            throw new BadRequestException("Teacher " + teacher.getUsername()
+                    + " can't add assessment to this course " + course.getTitle());
         }
 
-        Assessment assessment =
-                Assessment.builder()
-                        .maxScore(assessmentRequestDTO.getMaxScore())
-                        .title(assessmentRequestDTO.getTitle())
-                        .type(assessmentRequestDTO.getAssessmentType())
-                        .courseId(course.getCourseId())
-                        .weight(assessmentRequestDTO.getWeight() != null && assessmentRequestDTO.getWeight() > 0
-                                ? assessmentRequestDTO.getWeight()
-                                : 1.0)
-                        .build();
+        Assessment assessment = Assessment.builder()
+                .maxScore(assessmentRequestDTO.getMaxScore())
+                .title(assessmentRequestDTO.getTitle())
+                .type(assessmentRequestDTO.getAssessmentType())
+                .courseId(course.getCourseId())
+                .weight(assessmentRequestDTO.getWeight() != null && assessmentRequestDTO.getWeight() > 0
+                        ? assessmentRequestDTO.getWeight()
+                        : 1.0)
+                .build();
 
         assessmentRepo.save(assessment);
 
-
         Quiz quiz = new Quiz();
         quiz.setAssessment(assessment);
-        quiz.setDurationMinutes(((CreateQuizRequestDTO)assessmentRequestDTO).getDurationMinutes());
+        quiz.setDurationMinutes(((CreateQuizRequestDTO) assessmentRequestDTO).getDurationMinutes());
         quizRepo.save(quiz);
 
-
         List<QuizQuestionDTO> quizRequestDTOList =
-                ((CreateQuizRequestDTO)assessmentRequestDTO).getQuestionDTOList();
+                ((CreateQuizRequestDTO) assessmentRequestDTO).getQuestionDTOList();
 
-        List<Question> questionList = new ArrayList<>();
-        List<QuestionOption> questionOptionList = new ArrayList<>();
+        List<Question> questionList      = new ArrayList<>();
+        List<QuestionOption> optionList  = new ArrayList<>();
 
         for (QuizQuestionDTO quizQuestionDTO : quizRequestDTOList) {
 
             List<QuestionOptionDTO> questionOptionDTOList = quizQuestionDTO.getQuestionOptionDTOList();
 
+            // [ADDED] compute isMultiOption from how many options the teacher marked correct —
+            // this matches the frontend logic exactly and can't be set wrongly by the client
             long correctCount = questionOptionDTOList.stream()
-                    .filter(option -> Boolean.TRUE.equals(option.getIsCorrectOption()))
+                    .filter(o -> Boolean.TRUE.equals(o.getIsCorrectOption()))
                     .count();
             boolean isMultiOption = correctCount > 1;
 
@@ -132,6 +127,7 @@ public class QuizStrategy implements AssessmentStrategy {
                     .questionText(quizQuestionDTO.getQuestionText())
                     .quiz(quiz)
                     .marks(quizQuestionDTO.getMarks())
+                    // [ADDED] set isMultiOption and isPartMarkingAllowed on the entity
                     .isMultiOption(isMultiOption)
                     .isPartMarkingAllowed(
                             isMultiOption && Boolean.TRUE.equals(quizQuestionDTO.getIsPartMarkingAllowed())
@@ -146,20 +142,22 @@ public class QuizStrategy implements AssessmentStrategy {
                         .isCorrectOption(questionOptionDTO.getIsCorrectOption())
                         .question(question)
                         .build();
-                questionOptionList.add(questionOption);
+                optionList.add(questionOption);
             }
         }
 
         questionRepo.saveAll(questionList);
-        questionOptionRepo.saveAll(questionOptionList);
+        questionOptionRepo.saveAll(optionList);
 
-        Map<String,String> map = new HashMap<>();
-        map.put("message","Quiz created successfully");
-        map.put("assessmentId",assessment.getAssessmentId().toString());
+        Map<String, String> map = new HashMap<>();
+        map.put("message", "Quiz created successfully");
+        map.put("assessmentId", assessment.getAssessmentId().toString());
         map.put("quizId", quiz.getQuizId().toString());
 
         return map;
     }
+
+    // ── serveAssessment ───────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -167,7 +165,7 @@ public class QuizStrategy implements AssessmentStrategy {
 
         if (user.getRole().equals("STUDENT")) {
             Optional<Submission> existing =
-                    submissionRepo.findByStudentIdAndAssessmentAssessmentId(user.getUserId(),assessmentId);
+                    submissionRepo.findByStudentIdAndAssessmentAssessmentId(user.getUserId(), assessmentId);
 
             if (existing.isPresent() &&
                     existing.get().getSubmissionStatus() == SubmissionStatus.SUBMITTED) {
@@ -190,16 +188,15 @@ public class QuizStrategy implements AssessmentStrategy {
     }
 
     private QuizServeDTO mapToQuizServeDTO(Quiz quiz) {
-        if (quiz == null) {
-            return null;
-        }
+        if (quiz == null) return null;
+
         List<QuizQuestionServeDTO> questionDTOs = quiz.getQuestionList().stream()
                 .map(question -> {
-                    QuizQuestionServeDTO qDto
-                            = new QuizQuestionServeDTO();
+                    QuizQuestionServeDTO qDto = new QuizQuestionServeDTO();
                     qDto.setQuizQuestionId(question.getQuestionId());
                     qDto.setQuestionText(question.getQuestionText());
                     qDto.setMarks(question.getMarks());
+                    // [ADDED] expose isMultiOption and isPartMarkingAllowed to frontend
                     qDto.setIsMultiOption(question.getIsMultiOption());
                     qDto.setIsPartMarkingAllowed(question.getIsPartMarkingAllowed());
                     qDto.setImageUri(
@@ -208,7 +205,6 @@ public class QuizStrategy implements AssessmentStrategy {
                     );
 
                     if (question.getQuestionOptionList() != null) {
-
                         List<QuestionOptionServeDTO> optionDTOs = question.getQuestionOptionList()
                                 .stream()
                                 .map(option -> {
@@ -216,10 +212,8 @@ public class QuizStrategy implements AssessmentStrategy {
                                     oDto.setQuestionOptionId(option.getQuestionOptionId());
                                     oDto.setOptionText(option.getOptionText());
                                     oDto.setImageUri(
-                                            option.getHasImage() == null?
-                                                    null :
-                                                    imageService.generateImageUri("option",option.getQuestionOptionId())
-
+                                            option.getHasImage() == null ? null :
+                                                    imageService.generateImageUri("option", option.getQuestionOptionId())
                                     );
                                     return oDto;
                                 })
@@ -230,9 +224,7 @@ public class QuizStrategy implements AssessmentStrategy {
                 })
                 .toList();
 
-        QuizServeDTO quizServeDTO
-                = new QuizServeDTO(quiz.getQuizId(), quiz.getDurationMinutes(), questionDTOs);
-
+        QuizServeDTO quizServeDTO = new QuizServeDTO(quiz.getQuizId(), quiz.getDurationMinutes(), questionDTOs);
         quizServeDTO.setAssessmentType(AssessmentType.QUIZ);
         quizServeDTO.setTitle(quiz.getAssessment().getTitle());
         quizServeDTO.setDurationInMinutes(quiz.getDurationMinutes());
@@ -240,6 +232,7 @@ public class QuizStrategy implements AssessmentStrategy {
         return quizServeDTO;
     }
 
+    // ── getReport ─────────────────────────────────────────────────────────────
 
     @Override
     public AssessmentReportDTO getReport(UUID submissionId, CurrentUser user) throws BadRequestException {
@@ -256,7 +249,7 @@ public class QuizStrategy implements AssessmentStrategy {
                     + " is not authorized to access this report");
         }
 
-        // group responses by question
+        // [CHANGED] group responses by question to support multi-option reporting
         Map<UUID, List<StudentQuizQuestionResponse>> byQuestion = studentResponseList.stream()
                 .collect(Collectors.groupingBy(r -> r.getQuestion().getQuestionId()));
 
@@ -275,7 +268,6 @@ public class QuizStrategy implements AssessmentStrategy {
                     .map(r -> r.getQuestionOption().getQuestionOptionId())
                     .collect(Collectors.toSet());
 
-            // compute score
             double scoreAwarded = computeQuestionScore(question, correctIds, chosenIds);
 
             StudentQuestionAttemptDTO dto = new StudentQuestionAttemptDTO();
@@ -313,40 +305,12 @@ public class QuizStrategy implements AssessmentStrategy {
         return reportDTO;
     }
 
-    private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
-        int marks = question.getMarks() != null ? question.getMarks() : 0;
-
-        if (!question.getIsMultiOption()) {
-            // full marks or zero
-            return correctIds.equals(chosenIds) ? marks : 0.0;
-        }
-
-        long correctlyChosen = chosenIds.stream()
-                                .filter(id -> correctIds.contains(id))
-                                .count();
-
-        long incorrectlyChosen = chosenIds.stream()
-                                .filter(id -> !correctIds.contains(id))
-                                .count();
-
-        if (incorrectlyChosen > 0) {
-            return 0.0;
-        }
-
-        if (correctlyChosen == correctIds.size()) {
-            return marks;
-        }
-
-        if (Boolean.TRUE.equals(question.getIsPartMarkingAllowed())) {
-            return ((double) correctlyChosen / correctIds.size()) * marks;
-        }
-
-        return 0.0;
-    }
+    // ── submitAssessment ──────────────────────────────────────────────────────
 
     @Override
     @Transactional
-    public Map<String,String> submitAssessment(CurrentUser student, AssessmentRequestDTO assessmentRequestDTO) throws BadRequestException {
+    public Map<String, String> submitAssessment(CurrentUser student,
+                                                AssessmentRequestDTO assessmentRequestDTO) throws BadRequestException {
 
         StudentQuizQuestionResponseDTO dto = (StudentQuizQuestionResponseDTO) assessmentRequestDTO;
 
@@ -393,15 +357,16 @@ public class QuizStrategy implements AssessmentStrategy {
         List<StudentQuestionAndAnswerDTO> studentQuestionAndAnswerDTOList =
                 dto.getStudentQuestionAndAnswerDTOList();
 
-        List<StudentQuizQuestionResponse> studentQuizQuestionResponseList = new ArrayList<>();
+        List<StudentQuizQuestionResponse> responseList = new ArrayList<>();
 
-        for (StudentQuestionAndAnswerDTO studentQuestionAndAnswerDTO : studentQuestionAndAnswerDTOList) {
+        // [CHANGED] each DTO now carries a list of selected optionIds (multi-option support).
+        // We save one StudentQuizQuestionResponse row per selected option per question.
+        for (StudentQuestionAndAnswerDTO answerDTO : studentQuestionAndAnswerDTOList) {
 
-            Question question = questionRepo.findById(studentQuestionAndAnswerDTO.getQuestionId())
+            Question question = questionRepo.findById(answerDTO.getQuestionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
-            // iterate over all selected option IDs for this question
-            for (UUID selectedOptionId : studentQuestionAndAnswerDTO.getQuestionOptionIds()) {
+            for (UUID selectedOptionId : answerDTO.getQuestionOptionIds()) {
 
                 QuestionOption questionOption = questionOptionRepo.findById(selectedOptionId)
                         .orElseThrow(() -> new ResourceNotFoundException("Option not found"));
@@ -410,22 +375,21 @@ public class QuizStrategy implements AssessmentStrategy {
                     throw new BadRequestException("Option does not belong to the given question");
                 }
 
-                StudentQuizQuestionResponse response = StudentQuizQuestionResponse.builder()
-                        .quiz(quiz)
-                        .submission(submission)
-                        .question(question)
-                        .questionOption(questionOption)
-                        .build();
+                StudentQuizQuestionResponse response = new StudentQuizQuestionResponse();
+                response.setQuiz(quiz);
+                response.setSubmission(submission);
+                response.setQuestion(question);
+                response.setQuestionOption(questionOption);
+                // isCorrectOptionChosen removed — correctness computed in ResultServiceImpl
 
-                studentQuizQuestionResponseList.add(response);
+                responseList.add(response);
             }
         }
-        // DELETE the draft
+
+        // delete draft answers
         quizDraftAnswerRepo.deleteAllBySubmissionId(submission.getSubmissionId());
 
-         // if submission occurs twice for some reason,
-        // or if a previous attempt partially committed before a rollback,
-        // we don't hit the unique constraint.
+        // idempotency guard — clean up any partially committed responses
         List<StudentQuizQuestionResponse> existingResponses =
                 studentQuizQuestionResponseRepo.findAllBySubmission(submission);
         if (!existingResponses.isEmpty()) {
@@ -433,7 +397,7 @@ public class QuizStrategy implements AssessmentStrategy {
             studentQuizQuestionResponseRepo.flush();
         }
 
-        studentQuizQuestionResponseRepo.saveAll(studentQuizQuestionResponseList);
+        studentQuizQuestionResponseRepo.saveAll(responseList);
 
         submission.setSubmissionStatus(SubmissionStatus.SUBMITTED);
         submissionRepo.save(submission);
@@ -451,7 +415,13 @@ public class QuizStrategy implements AssessmentStrategy {
         return map;
     }
 
+    // ── startSession ──────────────────────────────────────────────────────────
+
     @Override
+    // REQUIRES_NEW gives this method its own transaction.
+    // When DataIntegrityViolationException is thrown by saveAndFlush, the inner
+    // transaction rolls back cleanly, and the catch block's re-query runs in a
+    // fresh context that can see the committed row from a concurrent request.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
 
@@ -472,21 +442,18 @@ public class QuizStrategy implements AssessmentStrategy {
                     .studentId(user.getUserId())
                     .submissionStatus(SubmissionStatus.IN_PROGRESS)
                     .startedAt(Instant.now())
-                    .attemptCount(1)
+                    .attemptCount(1)   // explicit — don't rely on @Builder.Default for NOT NULL columns
                     .isLate(false)
                     .build();
 
             submissionRepo.saveAndFlush(submission);
 
         } catch (DataIntegrityViolationException e) {
-            // two requests raced — the other one already inserted the row.
-            // REQUIRES_NEW means this transaction is already rolled back,
-            // so the re-query reads the committed row from the winning request.
-            log.warn(
-                    "Race condition on startSession for studentId={} assessmentId={} — fetching existing session",
-                    user.getUserId(), assessmentId
-            );
+            log.warn("Race condition on startSession for studentId={} assessmentId={} — fetching existing session",
+                    user.getUserId(), assessmentId);
 
+            // clear the session so Hibernate doesn't try to flush the failed
+            // INSERT again when we run the re-query below
             entityManager.clear();
 
             submission = submissionRepo
@@ -521,7 +488,9 @@ public class QuizStrategy implements AssessmentStrategy {
                 .build();
     }
 
+    // ── saveAnswer ────────────────────────────────────────────────────────────
 
+    @Override
     @Transactional
     public void saveAnswer(UUID submissionId, UUID questionId, List<UUID> selectedOptionIds) throws BadRequestException {
 
@@ -553,6 +522,8 @@ public class QuizStrategy implements AssessmentStrategy {
         }
     }
 
+    // ── deleteAssessment ──────────────────────────────────────────────────────
+
     @Override
     @Transactional
     public void deleteAssessment(UUID assessmentId, CurrentUser teacher) throws BadRequestException {
@@ -571,5 +542,35 @@ public class QuizStrategy implements AssessmentStrategy {
 
         log.info("Assessment {} deleted by teacher {} (rollback)",
                 assessmentId, teacher.getUsername());
+    }
+
+    // ── computeQuestionScore ──────────────────────────────────────────────────
+
+    // [ADDED] shared scoring logic used by getReport and ResultServiceImpl
+    private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
+        int marks = question.getMarks() != null ? question.getMarks() : 0;
+
+        if (!Boolean.TRUE.equals(question.getIsMultiOption())) {
+            // single-option: full marks or zero
+            return correctIds.equals(chosenIds) ? marks : 0.0;
+        }
+
+        // any wrongly selected option = zero immediately
+        long incorrectlyChosen = chosenIds.stream()
+                .filter(id -> !correctIds.contains(id))
+                .count();
+        if (incorrectlyChosen > 0) return 0.0;
+
+        long correctlyChosen = chosenIds.stream()
+                .filter(correctIds::contains)
+                .count();
+
+        if (correctlyChosen == correctIds.size()) return marks;
+
+        if (Boolean.TRUE.equals(question.getIsPartMarkingAllowed())) {
+            return ((double) correctlyChosen / correctIds.size()) * marks;
+        }
+
+        return 0.0;
     }
 }
