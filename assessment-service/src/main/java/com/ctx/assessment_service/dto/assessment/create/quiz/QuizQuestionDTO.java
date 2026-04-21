@@ -15,4 +15,5 @@ public class QuizQuestionDTO {
     private List<QuestionOptionDTO> questionOptionDTOList;
 
     private Integer marks;
+    private Boolean isPartMarkingAllowed;
 }

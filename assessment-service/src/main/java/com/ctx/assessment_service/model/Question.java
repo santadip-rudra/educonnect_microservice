@@ -27,6 +27,10 @@ public class Question {
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    // FIX: was Set<QuestionOption> with no ordering — option A/B/C/D could appear in
+    // any order each time. The frontend assigns letter badges (A, B, C…) by index position,
+    // so shuffled options produce wrong letter labels on every page load.
+    @@jakarta.persistence.OrderBy(clause = "questionOptionId ASC")
     private Set<QuestionOption> questionOptionList;
 
     @OneToMany(mappedBy = "question")
@@ -47,4 +51,12 @@ public class Question {
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
     private Integer marks;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isMultiOption = false;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isPartMarkingAllowed = false;
 }

@@ -31,6 +31,7 @@ public class Quiz {
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @OrderBy("questionId ASC")
     private Set<Question> questionList;
 
     @OneToMany(mappedBy = "quiz")

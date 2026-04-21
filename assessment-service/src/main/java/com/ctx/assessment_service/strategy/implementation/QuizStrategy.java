@@ -119,30 +119,34 @@ public class QuizStrategy implements AssessmentStrategy {
         List<Question> questionList = new ArrayList<>();
         List<QuestionOption> questionOptionList = new ArrayList<>();
 
-        for (QuizQuestionDTO quizQuestionDTO : quizRequestDTOList){
+        for (QuizQuestionDTO quizQuestionDTO : quizRequestDTOList) {
 
             List<QuestionOptionDTO> questionOptionDTOList = quizQuestionDTO.getQuestionOptionDTOList();
 
-            Question question =
-                    Question.builder()
-                            .questionText(quizQuestionDTO.getQuestionText())
-                            .quiz(quiz)
-                            .marks(quizQuestionDTO.getMarks())
-                            .build();
+            long correctCount = questionOptionDTOList.stream()
+                    .filter(option -> Boolean.TRUE.equals(option.getIsCorrectOption()))
+                    .count();
+            boolean isMultiOption = correctCount > 1;
+
+            Question question = Question.builder()
+                    .questionText(quizQuestionDTO.getQuestionText())
+                    .quiz(quiz)
+                    .marks(quizQuestionDTO.getMarks())
+                    .isMultiOption(isMultiOption)
+                    .isPartMarkingAllowed(
+                            isMultiOption && Boolean.TRUE.equals(quizQuestionDTO.getIsPartMarkingAllowed())
+                    )
+                    .build();
 
             questionList.add(question);
 
-            for (QuestionOptionDTO questionOptionDTO : questionOptionDTOList){
-
-                QuestionOption questionOption =
-                        QuestionOption.builder()
-                                .optionText(questionOptionDTO.getOptionText())
-                                .isCorrectOption(questionOptionDTO.getIsCorrectOption())
-                                .question(question)
-                                .build();
-
+            for (QuestionOptionDTO questionOptionDTO : questionOptionDTOList) {
+                QuestionOption questionOption = QuestionOption.builder()
+                        .optionText(questionOptionDTO.getOptionText())
+                        .isCorrectOption(questionOptionDTO.getIsCorrectOption())
+                        .question(question)
+                        .build();
                 questionOptionList.add(questionOption);
-
             }
         }
 
@@ -196,9 +200,11 @@ public class QuizStrategy implements AssessmentStrategy {
                     qDto.setQuizQuestionId(question.getQuestionId());
                     qDto.setQuestionText(question.getQuestionText());
                     qDto.setMarks(question.getMarks());
+                    qDto.setIsMultiOption(question.getIsMultiOption());
+                    qDto.setIsPartMarkingAllowed(question.getIsPartMarkingAllowed());
                     qDto.setImageUri(
-                            question.getHasImage() == null? null :
-                                    imageService.generateImageUri("question",question.getQuestionId())
+                            question.getHasImage() == null ? null :
+                                    imageService.generateImageUri("question", question.getQuestionId())
                     );
 
                     if (question.getQuestionOptionList() != null) {
@@ -237,61 +243,105 @@ public class QuizStrategy implements AssessmentStrategy {
 
     @Override
     public AssessmentReportDTO getReport(UUID submissionId, CurrentUser user) throws BadRequestException {
-        List<StudentQuizQuestionResponse> studentResponseList
-                = studentQuizQuestionResponseRepo.findStudentQuizResponse(submissionId);
+        List<StudentQuizQuestionResponse> studentResponseList =
+                studentQuizQuestionResponseRepo.findStudentQuizResponse(submissionId);
 
-        if(studentResponseList == null || studentResponseList.isEmpty()){
+        if (studentResponseList == null || studentResponseList.isEmpty()) {
             throw new ResourceNotFoundException("Student response not found");
         }
 
-        if (!studentResponseList.get(0).getSubmission().getStudentId().equals(user.getUserId()))
-            if (user.getRole().equals("STUDENT")) {
-                throw new BadRequestException("Student " + user.getUsername()
-                        + " is not authorized to access this report");
-            }
-
-
-        StudentQuizReportDTO studentQuizReportDTO = new StudentQuizReportDTO();
-
-        List<StudentQuestionAttemptDTO> studentQuestionAttemptDTO = new ArrayList<>();
-        for(StudentQuizQuestionResponse response : studentResponseList){
-            studentQuestionAttemptDTO.add(toStudentQuizReportDTO(response));
+        if (user.getRole().equals("STUDENT") &&
+                !studentResponseList.get(0).getSubmission().getStudentId().equals(user.getUserId())) {
+            throw new BadRequestException("Student " + user.getUsername()
+                    + " is not authorized to access this report");
         }
 
-        studentQuizReportDTO.setStudentQuestionAttemptDTOList(studentQuestionAttemptDTO);
-        studentQuizReportDTO.setSubmissionId(submissionId);
+        // group responses by question
+        Map<UUID, List<StudentQuizQuestionResponse>> byQuestion = studentResponseList.stream()
+                .collect(Collectors.groupingBy(r -> r.getQuestion().getQuestionId()));
 
-        studentQuizReportDTO.setAssessmentType(AssessmentType.QUIZ);
-        studentQuizReportDTO.setTitle(studentResponseList.get(0).getSubmission().getAssessment().getTitle());
-        return studentQuizReportDTO;
+        List<StudentQuestionAttemptDTO> attempts = new ArrayList<>();
+
+        for (Map.Entry<UUID, List<StudentQuizQuestionResponse>> entry : byQuestion.entrySet()) {
+            Question question = entry.getValue().get(0).getQuestion();
+            List<StudentQuizQuestionResponse> responses = entry.getValue();
+
+            Set<UUID> correctIds = question.getQuestionOptionList().stream()
+                    .filter(QuestionOption::getIsCorrectOption)
+                    .map(QuestionOption::getQuestionOptionId)
+                    .collect(Collectors.toSet());
+
+            Set<UUID> chosenIds = responses.stream()
+                    .map(r -> r.getQuestionOption().getQuestionOptionId())
+                    .collect(Collectors.toSet());
+
+            // compute score
+            double scoreAwarded = computeQuestionScore(question, correctIds, chosenIds);
+
+            StudentQuestionAttemptDTO dto = new StudentQuestionAttemptDTO();
+            dto.setQuestionId(question.getQuestionId());
+            dto.setQuestionText(question.getQuestionText());
+            dto.setMarks(question.getMarks());
+            dto.setIsMultiOption(question.getIsMultiOption());
+            dto.setIsPartMarkingAllowed(question.getIsPartMarkingAllowed());
+            dto.setScoreAwarded(scoreAwarded);
+
+            dto.setCorrectOptionIds(new ArrayList<>(correctIds));
+            dto.setCorrectOptionTexts(
+                    question.getQuestionOptionList().stream()
+                            .filter(o -> correctIds.contains(o.getQuestionOptionId()))
+                            .map(QuestionOption::getOptionText)
+                            .toList()
+            );
+            dto.setChosenOptionIds(new ArrayList<>(chosenIds));
+            dto.setChosenOptionTexts(
+                    question.getQuestionOptionList().stream()
+                            .filter(o -> chosenIds.contains(o.getQuestionOptionId()))
+                            .map(QuestionOption::getOptionText)
+                            .toList()
+            );
+
+            attempts.add(dto);
+        }
+
+        StudentQuizReportDTO reportDTO = new StudentQuizReportDTO();
+        reportDTO.setSubmissionId(submissionId);
+        reportDTO.setAssessmentType(AssessmentType.QUIZ);
+        reportDTO.setTitle(studentResponseList.get(0).getSubmission().getAssessment().getTitle());
+        reportDTO.setStudentQuestionAttemptDTOList(attempts);
+
+        return reportDTO;
     }
 
+    private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
+        int marks = question.getMarks() != null ? question.getMarks() : 0;
 
-    private StudentQuestionAttemptDTO toStudentQuizReportDTO(StudentQuizQuestionResponse response){
-
-        StudentQuestionAttemptDTO studentQuestionAttemptDTO
-                = new StudentQuestionAttemptDTO();
-
-        Question question = response.getQuestion();
-
-        Set<QuestionOption> questionOptionSet = question.getQuestionOptionList();
-
-        for(QuestionOption option : questionOptionSet){
-            if(option.getIsCorrectOption()){
-                studentQuestionAttemptDTO.setCorrectOptionId(option.getQuestionOptionId());
-                studentQuestionAttemptDTO.setCorrectOptionText(option.getOptionText());
-            }
-            if(option.getQuestionOptionId().equals(response.getQuestionOption().getQuestionOptionId())){
-                studentQuestionAttemptDTO.setChosenOptionId(option.getQuestionOptionId());
-                studentQuestionAttemptDTO.setChosenOptionText(option.getOptionText());
-            }
+        if (!question.getIsMultiOption()) {
+            // full marks or zero
+            return correctIds.equals(chosenIds) ? marks : 0.0;
         }
 
-        studentQuestionAttemptDTO.setIsCorrect(response.getIsCorrectOptionChosen());
-        studentQuestionAttemptDTO.setQuestionId(question.getQuestionId());
-        studentQuestionAttemptDTO.setQuestionText(question.getQuestionText());
+        long correctlyChosen = chosenIds.stream()
+                                .filter(id -> correctIds.contains(id))
+                                .count();
 
-        return studentQuestionAttemptDTO;
+        long incorrectlyChosen = chosenIds.stream()
+                                .filter(id -> !correctIds.contains(id))
+                                .count();
+
+        if (incorrectlyChosen > 0) {
+            return 0.0;
+        }
+
+        if (correctlyChosen == correctIds.size()) {
+            return marks;
+        }
+
+        if (Boolean.TRUE.equals(question.getIsPartMarkingAllowed())) {
+            return ((double) correctlyChosen / correctIds.size()) * marks;
+        }
+
+        return 0.0;
     }
 
     @Override
@@ -350,23 +400,26 @@ public class QuizStrategy implements AssessmentStrategy {
             Question question = questionRepo.findById(studentQuestionAndAnswerDTO.getQuestionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
-            QuestionOption questionOption = questionOptionRepo.findById(studentQuestionAndAnswerDTO.getQuestionOptionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Option not found"));
+            // iterate over all selected option IDs for this question
+            for (UUID selectedOptionId : studentQuestionAndAnswerDTO.getQuestionOptionIds()) {
 
-            if (!questionOption.getQuestion().getQuestionId().equals(question.getQuestionId())) {
-                throw new BadRequestException("Option does not belong to the given question");
+                QuestionOption questionOption = questionOptionRepo.findById(selectedOptionId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Option not found"));
+
+                if (!questionOption.getQuestion().getQuestionId().equals(question.getQuestionId())) {
+                    throw new BadRequestException("Option does not belong to the given question");
+                }
+
+                StudentQuizQuestionResponse response = StudentQuizQuestionResponse.builder()
+                        .quiz(quiz)
+                        .submission(submission)
+                        .question(question)
+                        .questionOption(questionOption)
+                        .build();
+
+                studentQuizQuestionResponseList.add(response);
             }
-
-            StudentQuizQuestionResponse studentQuizQuestionResponse = new StudentQuizQuestionResponse();
-            studentQuizQuestionResponse.setQuiz(quiz);
-            studentQuizQuestionResponse.setSubmission(submission);
-            studentQuizQuestionResponse.setQuestion(question);
-            studentQuizQuestionResponse.setQuestionOption(questionOption);
-            studentQuizQuestionResponse.setIsCorrectOptionChosen(questionOption.getIsCorrectOption());
-
-            studentQuizQuestionResponseList.add(studentQuizQuestionResponse);
         }
-
         // DELETE the draft
         quizDraftAnswerRepo.deleteAllBySubmissionId(submission.getSubmissionId());
 

@@ -12,4 +12,7 @@ public class QuizQuestionServeDTO {
     private String imageUri;
     private List<QuestionOptionServeDTO> questionOptionServeDTOList;
     private Integer marks;
+
+    private Boolean isMultiOption;
+    private Boolean isPartMarkingAllowed;
 }

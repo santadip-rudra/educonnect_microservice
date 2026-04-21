@@ -13,7 +13,7 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_student_quiz_question_response",
-                        columnNames = {"submission_id","question_id"}
+                        columnNames = {"submission_id", "question_id", "question_option_id"}
                 )
         }
 )
@@ -26,8 +26,6 @@ public class StudentQuizQuestionResponse { //Respose for each question
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID studentQuizQuestionResponseId;
 
-    private Boolean isCorrectOptionChosen;
-
     @ManyToOne
     @JoinColumn(name = "quiz_id")
     private Quiz quiz;
@@ -38,10 +36,9 @@ public class StudentQuizQuestionResponse { //Respose for each question
 
     @ManyToOne
     @JoinColumn(name = "question_option_id")
-    private QuestionOption questionOption;  // We might need to create another table!!! IFF we accept multiple ans
+    private QuestionOption questionOption;
 
     @ManyToOne
     @JoinColumn(name = "submission_id")
     private Submission submission;
-
 }
