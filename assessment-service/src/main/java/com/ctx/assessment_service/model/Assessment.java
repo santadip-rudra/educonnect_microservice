@@ -50,6 +50,7 @@ public class Assessment {
     private Double weight = 1.0;
 
     @OneToMany(mappedBy = "assessment")
+    @ToString.Exclude
     private List<Submission> submissionList = new ArrayList<>();
 
 }

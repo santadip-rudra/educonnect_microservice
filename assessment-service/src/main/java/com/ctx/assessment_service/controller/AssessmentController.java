@@ -63,7 +63,7 @@ public class AssessmentController {
     public ResponseEntity<GenericResponse<Map<String,String>>> createAssignment(
             @RequestBody CreateAssessmentRequestDTO dto,
             @AuthenticationPrincipal CurrentUser user
-    ) throws BadRequestException{
+            ) throws BadRequestException{
 
 
         return new ResponseEntity<>(
@@ -105,9 +105,9 @@ public class AssessmentController {
     @GetMapping("/quiz/view/{type}/image/{id}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT') or hasRole('ADMIN')")
     public void viewImage(
-            @PathVariable("type") String type,
-            @PathVariable("id") UUID id,
-            HttpServletResponse response
+        @PathVariable("type") String type,
+        @PathVariable("id") UUID id,
+        HttpServletResponse response
     ) throws IOException {
         ImageStreamDTO imageStreamDTO = null;
 
@@ -165,13 +165,41 @@ public class AssessmentController {
         );
     }
 
+    /**
+     * @param dto   The payload (same structure as submit)
+     * @param user  AuthenticationPrincipal
+     * @param files The replacement files
+     * @return Success message with updated attemptCount
+     */
+    @PatchMapping("/resubmit")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<?> resubmitAssessment(
+            @RequestPart("request") AssessmentRequestDTO dto,
+            @AuthenticationPrincipal CurrentUser user,
+            @RequestPart("files") MultipartFile[] files
+    ) throws BadRequestException, DocumentProcessingException {
+
+        if (files != null && files.length != 0) {
+            ((AssignmentRequestDTO) dto).setFiles(Arrays.asList(files));
+        }
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        assessmentFactory.resubmitAssessment(user, dto),
+                        "Assignment resubmitted successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
     @GetMapping("/get-assessment/{assessmentType}/{assessmentId}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT') or hasRole('ADMIN')")
     public ResponseEntity<GenericResponse<AssessmentServeDTO>> serveAssessment(
             @PathVariable("assessmentId") UUID assessmentId,
             @PathVariable("assessmentType") String assessmentType,
             @AuthenticationPrincipal CurrentUser user
-    ) throws BadRequestException {
+            ) throws BadRequestException {
         return ResponseEntity.ok(
                 new GenericResponse<>(
                         assessmentFactory.serveAssessment(assessmentId,assessmentType,user),
@@ -213,7 +241,7 @@ public class AssessmentController {
 
     @PostMapping("/all/by-courses/{studentId}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN') or hasRole('STUDENT')")
-    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIds(
+    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIdsByStudentId(
             @RequestBody List<String> courseIdList,
             @PathVariable("studentId") UUID studentId
     ) throws BadRequestException {
@@ -221,7 +249,20 @@ public class AssessmentController {
         List<UUID> idList = courseIdList.stream().map(UUID::fromString).toList();
 
         return ResponseEntity.ok(
-                assessmentService.getAllAssessmentUsingListOfCourseIds(idList,studentId)
+                assessmentService.getAllAssessmentUsingListOfCourseIdsWithStudentId(idList,studentId)
+        );
+    }
+
+    @PostMapping("/all/by-courses")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN') or hasRole('STUDENT')")
+    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIds(
+            @RequestBody List<String> courseIdList
+    ) throws BadRequestException {
+
+        List<UUID> idList = courseIdList.stream().map(UUID::fromString).toList();
+
+        return ResponseEntity.ok(
+                assessmentService.getAllAssessmentUsingListOfCourseIds(idList)
         );
     }
 
@@ -282,6 +323,29 @@ public class AssessmentController {
         );
     }
 
+    /**
+     * @param assessmentId   the assignment's assessmentId
+     * @param assessmentType must be "ASSIGNMENT"
+     * @param teacher        the authenticated teacher
+     * @return list of per-student submission summaries
+     */
+    @GetMapping("/submissions/{assessmentType}/{assessmentId}")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getSubmissionSummaries(
+            @PathVariable("assessmentId") UUID assessmentId,
+            @PathVariable("assessmentType") String assessmentType,
+            @AuthenticationPrincipal CurrentUser teacher
+    ) throws BadRequestException {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        assessmentFactory.getSubmissionSummaries(assessmentId, assessmentType, teacher),
+                        "Submission summaries retrieved successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
     @GetMapping("/monthly-exam-stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getMonthlyExamStats(){
@@ -308,16 +372,6 @@ public class AssessmentController {
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
-        );
-    }
-
-    @PostMapping("/all/by-courses")
-    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIdsInternal(
-            @RequestBody List<String> courseIdList
-    ) {
-        List<UUID> idList = courseIdList.stream().map(UUID::fromString).toList();
-        return ResponseEntity.ok(
-                assessmentService.getAllAssessmentUsingCourseIdOnly(idList)
         );
     }
 

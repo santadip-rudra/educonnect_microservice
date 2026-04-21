@@ -26,6 +26,7 @@ public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResp
     public Course toEntity(CourseRequestDTO requestDTO) {
         Course course=new Course();
         course.setTitle(requestDTO.title());
+        course.setCredit(requestDTO.credit());
         course.setDescription(requestDTO.description());
         course.setCourseCode(requestDTO.courseCode());
         course.setDuration(0.0);
