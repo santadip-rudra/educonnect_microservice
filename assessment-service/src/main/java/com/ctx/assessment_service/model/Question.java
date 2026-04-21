@@ -22,14 +22,19 @@ public class Question {
 
     @ManyToOne
     @JoinColumn(name = "quiz_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Quiz quiz;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @OrderBy("position ASC")
     private Set<QuestionOption> questionOptionList;
 
     @OneToMany(mappedBy = "question")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<StudentQuizQuestionResponse> studentQuizQuestionResponseList;
 
     @Lob
@@ -37,6 +42,7 @@ public class Question {
     @Basic(fetch = FetchType.LAZY)
     private byte[] imageBinData;
 
+    @Builder.Default
     private Boolean hasImage = false;
 
     @Column(nullable = true)
@@ -45,21 +51,17 @@ public class Question {
     @Column(nullable = true)
     private String imageFileName;
 
-    // nullable to stay compatible with existing rows
-    @Column(nullable = true)
+    @Column(nullable = true, columnDefinition = "INT DEFAULT 10")
     private Integer marks;
 
-    // [ADDED] true if teacher marked more than one option as correct.
-    // Computed at creation time in QuizStrategy — not set by the teacher directly.
-    // Tells the frontend to render checkboxes instead of radio buttons.
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     @Builder.Default
     private Boolean isMultiOption = false;
 
-    // [ADDED] only relevant when isMultiOption = true.
-    // false → student must select ALL correct options or gets 0 for the question.
-    // true  → student gets (correctSelected / totalCorrect) × marks (partial credit).
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     @Builder.Default
     private Boolean isPartMarkingAllowed = false;
+
+    @Column(nullable = true)
+    private Integer position;
 }

@@ -31,10 +31,11 @@ public class Quiz {
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    @OrderBy("questionId ASC")
+    @OrderBy("position ASC")
     private Set<Question> questionList;
 
     @OneToMany(mappedBy = "quiz")
+    @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private List<StudentQuizQuestionResponse> studentQuizResponseList;
 

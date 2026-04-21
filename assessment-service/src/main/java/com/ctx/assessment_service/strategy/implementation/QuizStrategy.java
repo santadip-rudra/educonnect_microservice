@@ -71,7 +71,6 @@ public class QuizStrategy implements AssessmentStrategy {
         return type.toString().equals("QUIZ") || type.toString().equals("QUIZ_SUBMISSION");
     }
 
-    // ── createAssessment ──────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -112,12 +111,11 @@ public class QuizStrategy implements AssessmentStrategy {
         List<Question> questionList      = new ArrayList<>();
         List<QuestionOption> optionList  = new ArrayList<>();
 
+        int qi = 0;
         for (QuizQuestionDTO quizQuestionDTO : quizRequestDTOList) {
 
             List<QuestionOptionDTO> questionOptionDTOList = quizQuestionDTO.getQuestionOptionDTOList();
 
-            // [ADDED] compute isMultiOption from how many options the teacher marked correct —
-            // this matches the frontend logic exactly and can't be set wrongly by the client
             long correctCount = questionOptionDTOList.stream()
                     .filter(o -> Boolean.TRUE.equals(o.getIsCorrectOption()))
                     .count();
@@ -127,20 +125,22 @@ public class QuizStrategy implements AssessmentStrategy {
                     .questionText(quizQuestionDTO.getQuestionText())
                     .quiz(quiz)
                     .marks(quizQuestionDTO.getMarks())
-                    // [ADDED] set isMultiOption and isPartMarkingAllowed on the entity
                     .isMultiOption(isMultiOption)
                     .isPartMarkingAllowed(
                             isMultiOption && Boolean.TRUE.equals(quizQuestionDTO.getIsPartMarkingAllowed())
                     )
+                    .position(qi++)
                     .build();
 
             questionList.add(question);
 
+            int oi = 0;
             for (QuestionOptionDTO questionOptionDTO : questionOptionDTOList) {
                 QuestionOption questionOption = QuestionOption.builder()
                         .optionText(questionOptionDTO.getOptionText())
                         .isCorrectOption(questionOptionDTO.getIsCorrectOption())
                         .question(question)
+                        .position(oi++)
                         .build();
                 optionList.add(questionOption);
             }
@@ -157,7 +157,6 @@ public class QuizStrategy implements AssessmentStrategy {
         return map;
     }
 
-    // ── serveAssessment ───────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -196,12 +195,12 @@ public class QuizStrategy implements AssessmentStrategy {
                     qDto.setQuizQuestionId(question.getQuestionId());
                     qDto.setQuestionText(question.getQuestionText());
                     qDto.setMarks(question.getMarks());
-                    // [ADDED] expose isMultiOption and isPartMarkingAllowed to frontend
                     qDto.setIsMultiOption(question.getIsMultiOption());
                     qDto.setIsPartMarkingAllowed(question.getIsPartMarkingAllowed());
                     qDto.setImageUri(
-                            question.getHasImage() == null ? null :
-                                    imageService.generateImageUri("question", question.getQuestionId())
+                            Boolean.TRUE.equals(question.getHasImage())
+                                    ? imageService.generateImageUri("question", question.getQuestionId())
+                                    : null
                     );
 
                     if (question.getQuestionOptionList() != null) {
@@ -212,8 +211,9 @@ public class QuizStrategy implements AssessmentStrategy {
                                     oDto.setQuestionOptionId(option.getQuestionOptionId());
                                     oDto.setOptionText(option.getOptionText());
                                     oDto.setImageUri(
-                                            option.getHasImage() == null ? null :
-                                                    imageService.generateImageUri("option", option.getQuestionOptionId())
+                                            Boolean.TRUE.equals(option.getHasImage())
+                                                    ? imageService.generateImageUri("option", option.getQuestionOptionId())
+                                                    : null
                                     );
                                     return oDto;
                                 })
@@ -232,7 +232,6 @@ public class QuizStrategy implements AssessmentStrategy {
         return quizServeDTO;
     }
 
-    // ── getReport ─────────────────────────────────────────────────────────────
 
     @Override
     public AssessmentReportDTO getReport(UUID submissionId, CurrentUser user) throws BadRequestException {
@@ -249,7 +248,6 @@ public class QuizStrategy implements AssessmentStrategy {
                     + " is not authorized to access this report");
         }
 
-        // [CHANGED] group responses by question to support multi-option reporting
         Map<UUID, List<StudentQuizQuestionResponse>> byQuestion = studentResponseList.stream()
                 .collect(Collectors.groupingBy(r -> r.getQuestion().getQuestionId()));
 
@@ -305,7 +303,6 @@ public class QuizStrategy implements AssessmentStrategy {
         return reportDTO;
     }
 
-    // ── submitAssessment ──────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -359,8 +356,6 @@ public class QuizStrategy implements AssessmentStrategy {
 
         List<StudentQuizQuestionResponse> responseList = new ArrayList<>();
 
-        // [CHANGED] each DTO now carries a list of selected optionIds (multi-option support).
-        // We save one StudentQuizQuestionResponse row per selected option per question.
         for (StudentQuestionAndAnswerDTO answerDTO : studentQuestionAndAnswerDTOList) {
 
             Question question = questionRepo.findById(answerDTO.getQuestionId())
@@ -380,7 +375,6 @@ public class QuizStrategy implements AssessmentStrategy {
                 response.setSubmission(submission);
                 response.setQuestion(question);
                 response.setQuestionOption(questionOption);
-                // isCorrectOptionChosen removed — correctness computed in ResultServiceImpl
 
                 responseList.add(response);
             }
@@ -415,7 +409,6 @@ public class QuizStrategy implements AssessmentStrategy {
         return map;
     }
 
-    // ── startSession ──────────────────────────────────────────────────────────
 
     @Override
     // REQUIRES_NEW gives this method its own transaction.
@@ -442,7 +435,7 @@ public class QuizStrategy implements AssessmentStrategy {
                     .studentId(user.getUserId())
                     .submissionStatus(SubmissionStatus.IN_PROGRESS)
                     .startedAt(Instant.now())
-                    .attemptCount(1)   // explicit — don't rely on @Builder.Default for NOT NULL columns
+                    .attemptCount(1)
                     .isLate(false)
                     .build();
 
@@ -452,8 +445,6 @@ public class QuizStrategy implements AssessmentStrategy {
             log.warn("Race condition on startSession for studentId={} assessmentId={} — fetching existing session",
                     user.getUserId(), assessmentId);
 
-            // clear the session so Hibernate doesn't try to flush the failed
-            // INSERT again when we run the re-query below
             entityManager.clear();
 
             submission = submissionRepo
@@ -488,7 +479,6 @@ public class QuizStrategy implements AssessmentStrategy {
                 .build();
     }
 
-    // ── saveAnswer ────────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -522,7 +512,6 @@ public class QuizStrategy implements AssessmentStrategy {
         }
     }
 
-    // ── deleteAssessment ──────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -544,18 +533,14 @@ public class QuizStrategy implements AssessmentStrategy {
                 assessmentId, teacher.getUsername());
     }
 
-    // ── computeQuestionScore ──────────────────────────────────────────────────
 
-    // [ADDED] shared scoring logic used by getReport and ResultServiceImpl
     private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
         int marks = question.getMarks() != null ? question.getMarks() : 0;
 
         if (!Boolean.TRUE.equals(question.getIsMultiOption())) {
-            // single-option: full marks or zero
             return correctIds.equals(chosenIds) ? marks : 0.0;
         }
 
-        // any wrongly selected option = zero immediately
         long incorrectlyChosen = chosenIds.stream()
                 .filter(id -> !correctIds.contains(id))
                 .count();

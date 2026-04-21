@@ -28,6 +28,8 @@ public class QuestionOption {
     private Boolean isCorrectOption ;
 
     @OneToMany(mappedBy = "questionOption")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private List<StudentQuizQuestionResponse> studentQuizQuestionResponseList;
 
     @Lob
@@ -35,6 +37,7 @@ public class QuestionOption {
     @Basic(fetch = FetchType.LAZY)
     private byte[] imageBinData;
 
+    @Builder.Default
     private Boolean hasImage = false;
 
     @Column(nullable = true)
@@ -42,4 +45,7 @@ public class QuestionOption {
 
     @Column(nullable = true)
     private String imageFileName;
+
+    @Column(nullable = true)
+    private Integer position;
 }
