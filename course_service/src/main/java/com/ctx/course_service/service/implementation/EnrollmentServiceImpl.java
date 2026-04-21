@@ -234,11 +234,13 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         Enrollment enrollment = Enrollment.builder()
                 .course(course)
-                .isActive(false)
+                //.isActive(false)
+                .isActive(true)
                 .studentId(studentId)
                 .remainingDuration(course.getDuration())
                 .progress(0.0)
-                .enrollmentStatus(EnrollmentStatus.PENDING)
+                //.enrollmentStatus(EnrollmentStatus.PENDING)
+                .enrollmentStatus(EnrollmentStatus.APPROVED)
                 .build();
 
         enrollmentRepo.save(enrollment);

@@ -16,7 +16,6 @@ import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
 import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
 import com.ctx.assessment_service.factory.AssessmentFactory;
-import com.ctx.assessment_service.model.Assessment;
 import com.ctx.assessment_service.service.contract.assessment.AssessmentService;
 import com.ctx.assessment_service.service.contract.image.ImageService;
 import com.ctx.assessment_service.service.contract.result.ResultService;
@@ -64,7 +63,7 @@ public class AssessmentController {
     public ResponseEntity<GenericResponse<Map<String,String>>> createAssignment(
             @RequestBody CreateAssessmentRequestDTO dto,
             @AuthenticationPrincipal CurrentUser user
-            ) throws BadRequestException{
+    ) throws BadRequestException{
 
 
         return new ResponseEntity<>(
@@ -106,9 +105,9 @@ public class AssessmentController {
     @GetMapping("/quiz/view/{type}/image/{id}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('STUDENT') or hasRole('ADMIN')")
     public void viewImage(
-        @PathVariable("type") String type,
-        @PathVariable("id") UUID id,
-        HttpServletResponse response
+            @PathVariable("type") String type,
+            @PathVariable("id") UUID id,
+            HttpServletResponse response
     ) throws IOException {
         ImageStreamDTO imageStreamDTO = null;
 
@@ -130,7 +129,6 @@ public class AssessmentController {
                 "inline; filename=\""  + imageStreamDTO.getFileName() + "\"");
         response.setContentType(imageStreamDTO.getContentType());
 
-
         StreamUtils.copy(inputStream,response.getOutputStream());
     }
 
@@ -140,7 +138,7 @@ public class AssessmentController {
      * @param user AuthenticationPrincipal
      * @param files The file data (null or empty in case of Quiz submission)
      * @return Success message
-     * @throws BadRequestException
+     * @throws BadRequestException,DocumentProcessingException
      */
     @PostMapping("/submit")
     @PreAuthorize("hasRole('STUDENT')")
@@ -159,7 +157,7 @@ public class AssessmentController {
         return new ResponseEntity<>(
                 new GenericResponse<>(
                         assessmentFactory.submitAssessment(user, dto),
-                        "Assessment created successfully",
+                        "Assessment submitted successfully",
                         HttpStatus.CREATED.value(),
                         LocalDateTime.now()
                 ),
@@ -173,7 +171,7 @@ public class AssessmentController {
             @PathVariable("assessmentId") UUID assessmentId,
             @PathVariable("assessmentType") String assessmentType,
             @AuthenticationPrincipal CurrentUser user
-            ) throws BadRequestException {
+    ) throws BadRequestException {
         return ResponseEntity.ok(
                 new GenericResponse<>(
                         assessmentFactory.serveAssessment(assessmentId,assessmentType,user),
@@ -213,14 +211,17 @@ public class AssessmentController {
         );
     }
 
-    @PostMapping("/all/by-courses")
+    @PostMapping("/all/by-courses/{studentId}")
     @PreAuthorize("hasRole('TEACHER') or hasRole('ADMIN') or hasRole('STUDENT')")
-    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIds(@RequestBody List<String> courseIdList){
+    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIds(
+            @RequestBody List<String> courseIdList,
+            @PathVariable("studentId") UUID studentId
+    ) throws BadRequestException {
 
         List<UUID> idList = courseIdList.stream().map(UUID::fromString).toList();
 
         return ResponseEntity.ok(
-                assessmentService.getAllAssessmentUsingListOfCourseIds(idList)
+                assessmentService.getAllAssessmentUsingListOfCourseIds(idList,studentId)
         );
     }
 
@@ -307,6 +308,16 @@ public class AssessmentController {
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )
+        );
+    }
+
+    @PostMapping("/all/by-courses")
+    public ResponseEntity<List<AssessmentResponseDTO>> getAllAssessmentWithCourseIdsInternal(
+            @RequestBody List<String> courseIdList
+    ) {
+        List<UUID> idList = courseIdList.stream().map(UUID::fromString).toList();
+        return ResponseEntity.ok(
+                assessmentService.getAllAssessmentUsingCourseIdOnly(idList)
         );
     }
 

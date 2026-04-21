@@ -63,7 +63,7 @@ public class EnrollmentController {
     }
 
 
-    @GetMapping("student/{studentId}")
+    @GetMapping("student/{studentId}/all")
     public ResponseEntity<GenericResponse<List<EnrollmentResponseDTO>>> getStudentEnrollments(
             @PathVariable("studentId") UUID studentId
     ) {
