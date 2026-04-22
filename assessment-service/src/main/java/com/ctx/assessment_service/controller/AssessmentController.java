@@ -31,7 +31,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.ctx.assessment_service.model.Result;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -176,7 +175,7 @@ public class AssessmentController {
     public ResponseEntity<?> resubmitAssessment(
             @RequestPart("request") AssessmentRequestDTO dto,
             @AuthenticationPrincipal CurrentUser user,
-            @RequestPart("files") MultipartFile[] files
+            @RequestPart("files") @Nullable MultipartFile[] files
     ) throws BadRequestException, DocumentProcessingException {
 
         if (files != null && files.length != 0) {

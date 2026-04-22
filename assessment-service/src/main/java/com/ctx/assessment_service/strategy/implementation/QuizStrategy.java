@@ -173,15 +173,18 @@ public class QuizStrategy implements AssessmentStrategy {
             }
         }
 
-        Quiz quiz = quizRepo.findQuizWithQuestionAndOptions(assessmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+        Assessment assessment = assessmentRepo.findById(assessmentId)
+                .orElseThrow(()-> new ResourceNotFoundException("Assessment not found"));
 
-        Assessment assessment = quiz.getAssessment();
 
         if (user.getRole().equals("STUDENT") &&
                 !courseServiceClient.isStudentEnrolled(user.getUserId(), assessment.getCourseId()).getData()) {
             throw new BadRequestException("Student `" + user.getUsername() + "` is not enrolled in this course");
         }
+
+        Quiz quiz = quizRepo.findQuizWithQuestionAndOptions(assessmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+
 
         return mapToQuizServeDTO(quiz);
     }
@@ -351,6 +354,13 @@ public class QuizStrategy implements AssessmentStrategy {
             throw new BadRequestException("Quiz does not belong to the given assessment");
         }
 
+        // Server-side deadline enforcement -> 30-second grace period for network latency
+        Instant deadline = submission.getStartedAt()
+                .plusSeconds((long) (quiz.getDurationMinutes() * 60));
+        if (Instant.now().isAfter(deadline.plusSeconds(30))) {
+            throw new BadRequestException("Quiz time has expired. Submission is no longer accepted.");
+        }
+
         List<StudentQuestionAndAnswerDTO> studentQuestionAndAnswerDTOList =
                 dto.getStudentQuestionAndAnswerDTOList();
 
@@ -473,7 +483,7 @@ public class QuizStrategy implements AssessmentStrategy {
         return QuizSessionResponseDTO.builder()
                 .submissionId(s.getSubmissionId())
                 .startedAt(s.getStartedAt().toString())
-                .durationMinutes(s.getAssessment().getQuiz().getDurationMinutes())
+                .durationInMinutes(s.getAssessment().getQuiz().getDurationMinutes())
                 .savedAnswers(savedAnswers)
                 .isResumed(isResumed)
                 .build();
