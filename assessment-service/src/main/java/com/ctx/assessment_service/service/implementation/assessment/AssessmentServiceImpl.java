@@ -68,10 +68,6 @@ public class AssessmentServiceImpl implements AssessmentService {
                     .filter(submission -> submission.getStudentId().equals(studentId))
                     .toList();
 
-            if(studentSubmissionList == null || studentSubmissionList.isEmpty()){
-                throw new BadRequestException("Student with id:" + studentId + " has no submission");
-            }
-
             AssessmentResponseDTO assessmentResponseDTO = AssessmentResponseDTO.builder()
                     .assessmentId(assessment.getAssessmentId())
                     .type(assessment.getType().toString())
@@ -80,7 +76,7 @@ public class AssessmentServiceImpl implements AssessmentService {
                     .title(assessment.getTitle())
                     .maxScore(assessment.getMaxScore())
                     .courseId(assessment.getCourseId())
-                    .submissionStatus(studentSubmissionList.get(0).getSubmissionStatus())
+                    .submissionStatus(studentSubmissionList.isEmpty() ? null : studentSubmissionList.get(0).getSubmissionStatus())
                     .build();
 
             assessmentResponseDTOList.add(assessmentResponseDTO);

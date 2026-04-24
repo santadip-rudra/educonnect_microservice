@@ -16,7 +16,7 @@ public class QuizSessionResponseDTO {
 
     private UUID submissionId;
     private String startedAt;          // ISO-8601 string — matches frontend expectation
-    private Double durationMinutes;
+    private Double durationInMinutes;
     private Boolean isResumed;
     private List<SavedAnswerDTO> savedAnswers;
 
