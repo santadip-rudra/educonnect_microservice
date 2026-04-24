@@ -13,4 +13,7 @@ public class QuizQuestionDTO {
 
     @JsonProperty("questionOptions")
     private List<QuestionOptionDTO> questionOptionDTOList;
+
+    private Integer marks;
+    private Boolean isPartMarkingAllowed;
 }

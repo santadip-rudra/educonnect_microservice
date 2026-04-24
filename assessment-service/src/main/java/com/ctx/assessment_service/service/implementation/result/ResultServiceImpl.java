@@ -2,13 +2,11 @@ package com.ctx.assessment_service.service.implementation.result;
 
 import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
-import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.result.StudentResultDTO;
 import com.ctx.assessment_service.dto.result.CoursePassFailStatsDTO;
 import org.springframework.transaction.annotation.Transactional;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.external_response.StudentResponse;
-import com.ctx.assessment_service.dto.result.ExamStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
@@ -25,9 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,12 +33,9 @@ public class ResultServiceImpl implements ResultService {
 
     private final SubmissionRepo submissionRepo;
     private final AssessmentRepo assessmentRepo;
-    //    private final StudentRepo studentRepo;
     private final ResultRepo resultRepo;
     private final StudentQuizQuestionResponseRepo studentQuizQuestionResponseRepo;
-
     private final EntityManagerRepo entityManagerRepo;
-
     private final UserManagementServiceClient userManagementServiceClient;
     private final CourseServiceClient courseServiceClient;
 
@@ -50,33 +44,83 @@ public class ResultServiceImpl implements ResultService {
         Assessment assessment = assessmentRepo.findById(assessmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assessment not found"));
 
-        Submission submission = submissionRepo.findByStudentIdAndAssessmentAssessmentId(studentId, assessmentId)
+        Submission submission = submissionRepo
+                .findByStudentIdAndAssessmentAssessmentId(studentId, assessmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
 
-        List<StudentQuizQuestionResponse> studentQuizQuestionResponseList
-                = studentQuizQuestionResponseRepo.findAllBySubmission(submission);
+        List<StudentQuizQuestionResponse> responseList =
+                studentQuizQuestionResponseRepo.findAllBySubmission(submission);
 
-        long totalResponse = studentQuizQuestionResponseList.size();
-        long correctResponse = studentQuizQuestionResponseList.stream()
-                .filter(resp -> resp.getIsCorrectOptionChosen())
-                .count();
+        // [CHANGED] was a simple correct/total ratio — now computes per-question
+        // scores using marks and partial marking rules, then sums to a total.
+        double totalEarned  = 0.0;
+        double totalPossible = 0.0;
 
-        double score = (totalResponse == 0) ? 0.0
-                : (double) correctResponse / totalResponse;
+        // group responses by question so we can evaluate all chosen options together
+        Map<UUID, List<StudentQuizQuestionResponse>> byQuestion = responseList.stream()
+                .collect(Collectors.groupingBy(r -> r.getQuestion().getQuestionId()));
+
+        for (Map.Entry<UUID, List<StudentQuizQuestionResponse>> entry : byQuestion.entrySet()) {
+            Question question = entry.getValue().get(0).getQuestion();
+            int marks = question.getMarks() != null ? question.getMarks() : 0;
+            totalPossible += marks;
+
+            Set<UUID> correctIds = question.getQuestionOptionList().stream()
+                    .filter(QuestionOption::getIsCorrectOption)
+                    .map(QuestionOption::getQuestionOptionId)
+                    .collect(Collectors.toSet());
+
+            Set<UUID> chosenIds = entry.getValue().stream()
+                    .map(r -> r.getQuestionOption().getQuestionOptionId())
+                    .collect(Collectors.toSet());
+
+            totalEarned += computeQuestionScore(question, correctIds, chosenIds);
+        }
+
+        // percentageScore = earned / possible (0.0–1.0), or 0 if no marks defined
+        double percentageScore = (totalPossible == 0) ? 0.0 : totalEarned / totalPossible;
 
         Result result = new Result();
         result.setAssessment(assessment);
         result.setStudentId(studentId);
         result.setSubmission(submission);
-        result.setPercentageScore(score);
-        result.setStatus(score >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
+        result.setPercentageScore(percentageScore);
+        result.setStatus(percentageScore >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
 
         resultRepo.save(result);
 
-        // Push updated average to course-service so Enrollment.finalGrade stays current.
         pushAverageToCourseService(studentId, assessment.getCourseId());
 
         return "result computed successfully";
+    }
+
+    // ── [ADDED] per-question scoring with partial marking support ─────────────
+    private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
+        int marks = question.getMarks() != null ? question.getMarks() : 0;
+
+        if (!Boolean.TRUE.equals(question.getIsMultiOption())) {
+            // single-option: full marks or zero
+            return correctIds.equals(chosenIds) ? marks : 0.0;
+        }
+
+        // multi-option: any wrongly selected option = zero immediately
+        long incorrectlyChosen = chosenIds.stream()
+                .filter(id -> !correctIds.contains(id))
+                .count();
+        if (incorrectlyChosen > 0) return 0.0;
+
+        long correctlyChosen = chosenIds.stream()
+                .filter(correctIds::contains)
+                .count();
+
+        if (correctlyChosen == correctIds.size()) return marks; // all correct → full marks
+
+        if (Boolean.TRUE.equals(question.getIsPartMarkingAllowed())) {
+            // partial credit: (correctSelected / totalCorrect) × marks
+            return ((double) correctlyChosen / correctIds.size()) * marks;
+        }
+
+        return 0.0; // partial marking not allowed — must get all correct
     }
 
     @Override
@@ -107,10 +151,7 @@ public class ResultServiceImpl implements ResultService {
 
             result.setPercentageScore(score);
             result.setStatus(score >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
-
             resultRepo.save(result);
-
-            // Push updated average to course-service.
             pushAverageToCourseService(studentId, assessment.getCourseId());
 
             return teacher.getUsername() + " updated the score of the assignment";
@@ -118,7 +159,8 @@ public class ResultServiceImpl implements ResultService {
 
         StudentResponse student = userManagementServiceClient.findByStudentId(studentId);
 
-        Submission submission = submissionRepo.findByStudentIdAndAssessmentAssessmentId(studentId, assessmentId)
+        Submission submission = submissionRepo
+                .findByStudentIdAndAssessmentAssessmentId(studentId, assessmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student [name: " + student.getFullName()
                         + "] has not submitted the assignment yet"));
 
@@ -135,29 +177,12 @@ public class ResultServiceImpl implements ResultService {
         result.setSubmission(submission);
         result.setPercentageScore(score);
         result.setStatus(score >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
-
         resultRepo.save(result);
-
-        // Push updated average to course-service.
         pushAverageToCourseService(studentId, assessment.getCourseId());
 
         return "Result of `" + student.getFullName() + "` [evaluated by `" + teacher.getUsername() + "`] saved successfully";
     }
 
-    /**
-     * Computes the student's weighted average percentageScore across all Results they
-     * have for the given course, then calls course-service to persist it on
-     * Enrollment.finalGrade.
-     *
-     * Formula: sum(score x weight) / sum(weight)
-     *   - Only assessments the student has a Result for contribute to the sum.
-     *   - Ungraded assessments are excluded entirely (not treated as 0),
-     *     so the grade always reflects only what has actually been evaluated.
-     *
-     * Failure handling: if the Feign call fails (course-service down), we log and
-     * swallow -- the Result is already saved, so data is safe. Kafka is the
-     * production-grade upgrade path.
-     */
     private void pushAverageToCourseService(UUID studentId, UUID courseId) {
         try {
             List<Assessment> courseAssessments = assessmentRepo.findByCourseId(courseId);
@@ -165,8 +190,6 @@ public class ResultServiceImpl implements ResultService {
                     .map(Assessment::getAssessmentId)
                     .toList();
 
-            // Only include assessments the student has a Result for.
-            // Missing result = not yet graded, not a zero.
             List<Result> studentResults = resultRepo.findAllByStudentId(studentId).stream()
                     .filter(r -> r.getAssessment() != null
                             && assessmentIds.contains(r.getAssessment().getAssessmentId()))
@@ -177,7 +200,6 @@ public class ResultServiceImpl implements ResultService {
                 return;
             }
 
-            // Weighted average => sum(score x weight) / sum(weight)
             double weightedScoreSum = studentResults.stream()
                     .mapToDouble(r -> r.getPercentageScore() * r.getAssessment().getWeight())
                     .sum();
@@ -201,7 +223,6 @@ public class ResultServiceImpl implements ResultService {
 
     @Override
     public Result getResultWithId(UUID submissionId, CurrentUser user) throws BadRequestException {
-
         Submission submission = submissionRepo.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
 
@@ -213,7 +234,6 @@ public class ResultServiceImpl implements ResultService {
         return resultRepo.findBySubmissionSubmissionId(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Result not found"));
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -240,12 +260,12 @@ public class ResultServiceImpl implements ResultService {
     }
 
     @Override
-    public List<MonthlyExamStatsDTO> getMonthlyExamStats(){
+    public List<MonthlyExamStatsDTO> getMonthlyExamStats() {
         return entityManagerRepo.getMonthlyExamStats();
     }
 
     @Override
-    public List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats(){
+    public List<MonthlyAssessmentStatsDTO> getMonthlyAssessmentAndSubmissionStats() {
         return entityManagerRepo.getMonthlyAssessmentAndSubmissionStats();
     }
 
@@ -253,5 +273,4 @@ public class ResultServiceImpl implements ResultService {
     public List<CoursePassFailStatsDTO> getCoursePassFailStats() {
         return entityManagerRepo.getCoursePassFailStats();
     }
-
 }
