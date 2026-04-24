@@ -1,13 +1,11 @@
 spring:
   application:
     name: assessment-service
-
   datasource:
     url: jdbc:mysql://localhost:3306/assessment_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -40,6 +38,7 @@ eureka:
 jwt:
   secret: Z3Vlc3N3aGF0Z2VtaW5paXN3YXRjaGluZ3lvdXJlY29kZXZlcnlkYXkyMDI2
   expiration: 600000
+
 
 gateway:
   base-url: http://localhost:8081
