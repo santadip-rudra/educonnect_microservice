@@ -17,4 +17,7 @@ import java.util.UUID;
 public class StudentQuizQuestionResponseDTO extends AssessmentRequestDTO {
     private UUID quizId;
     List<StudentQuestionAndAnswerDTO> studentQuestionAndAnswerDTOList;
+
+    private Boolean forcedByViolation;
+    private Integer exitCount;
 }

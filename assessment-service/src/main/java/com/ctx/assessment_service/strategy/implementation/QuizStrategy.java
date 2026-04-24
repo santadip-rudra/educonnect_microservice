@@ -1,7 +1,9 @@
 package com.ctx.assessment_service.strategy.implementation;
 
+import com.ctx.assessment_service.client.ComplianceServiceClient;
 import com.ctx.assessment_service.client.CourseServiceClient;
 import com.ctx.assessment_service.client.UserManagementServiceClient;
+import com.ctx.assessment_service.dto.compliance.ComplianceViolationRequestDTO;
 import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.create.quiz.CreateQuizRequestDTO;
 import com.ctx.assessment_service.dto.assessment.create.quiz.QuestionOptionDTO;
@@ -39,6 +41,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,6 +68,7 @@ public class QuizStrategy implements AssessmentStrategy {
     private final EntityManager entityManager;
     private final CourseServiceClient courseServiceClient;
     private final UserManagementServiceClient userManagementServiceClient;
+    private final ComplianceServiceClient complianceServiceClient;
 
     @Override
     public boolean supports(AssessmentType type) {
@@ -354,12 +358,21 @@ public class QuizStrategy implements AssessmentStrategy {
             throw new BadRequestException("Quiz does not belong to the given assessment");
         }
 
-        // Server-side deadline enforcement -> 30-second grace period for network latency
         Instant deadline = submission.getStartedAt()
                 .plusSeconds((long) (quiz.getDurationMinutes() * 60));
-        if (Instant.now().isAfter(deadline.plusSeconds(30))) {
+
+        boolean hasDraftAnswers = !quizDraftAnswerRepo
+                .findAllBySubmissionSubmissionId(submission.getSubmissionId())
+                .isEmpty();
+
+        long gracePeriodSeconds = hasDraftAnswers ? 5 * 60 : 30;
+
+        if (Instant.now().isAfter(deadline.plusSeconds(gracePeriodSeconds))) {
+            submission.setSubmissionStatus(SubmissionStatus.REJECTED);
+            submissionRepo.save(submission);
             throw new BadRequestException("Quiz time has expired. Submission is no longer accepted.");
         }
+
 
         List<StudentQuestionAndAnswerDTO> studentQuestionAndAnswerDTOList =
                 dto.getStudentQuestionAndAnswerDTOList();
@@ -409,6 +422,29 @@ public class QuizStrategy implements AssessmentStrategy {
         String msg = resultService.computeQuizResult(assessment.getAssessmentId(), student.getUserId());
         log.info("Message from resultService : {}", msg);
         log.info("Result computed successfully for quiz : {}", quiz.getQuizId());
+
+        if (Boolean.TRUE.equals(dto.getForcedByViolation())) {
+            try {
+                complianceServiceClient.raiseViolation(
+                        new ComplianceViolationRequestDTO(
+                                student.getUserId(),
+                                "QUIZ_VIOLATION",
+                                "AUTO_SUBMITTED",
+                                LocalDate.now(),
+                                List.of(
+                                        "submissionId=" + submission.getSubmissionId(),
+                                        "exitCount=" + (dto.getExitCount() != null ? dto.getExitCount() : "unknown"),
+                                        "reason=REPEATED_FULLSCREEN_EXIT"
+                                )
+                        )
+                );
+                log.info("Compliance violation raised for studentId={} submissionId={}",
+                        student.getUserId(), submission.getSubmissionId());
+            } catch (Exception e) {
+                log.error("Failed to raise compliance violation for studentId={} submissionId={} — {}",
+                        student.getUserId(), submission.getSubmissionId(), e.getMessage());
+            }
+        }
 
         Map<String, String> map = new HashMap<>();
         map.put("message", "Attempted the Quiz with id " + quiz.getQuizId());
