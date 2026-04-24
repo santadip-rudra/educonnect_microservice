@@ -6,13 +6,17 @@ import com.ctx.user_management_service.dto.register.UpdateStudentDTO;
 import com.ctx.user_management_service.dto.register.UpdateTeacherDTO;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
 @Data
 @SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "role", visible = true)
 @JsonSubTypes(
         {
