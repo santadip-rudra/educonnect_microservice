@@ -181,4 +181,8 @@ public class AssessmentFactory {
         return resolve(parseType(assessmentType))
                 .getSubmissionSummaries(assessmentId, teacher);
     }
+
+    public void deleteAssessment(UUID assessmentId, String assessmentType, CurrentUser teacher) throws BadRequestException {
+        resolve(parseType(assessmentType)).deleteAssessment(assessmentId,teacher);
+    }
 }

@@ -327,6 +327,11 @@ public class AssignmentStrategy implements AssessmentStrategy {
     }
 
     @Override
+    public void deleteAssessment(UUID assessmentId, CurrentUser teacher) throws BadRequestException {
+        throw new BadRequestException("method not implemented yet for Assignment");
+    }
+
+    @Override
     public AssessmentReportDTO getReport(UUID submissionId,
                                          CurrentUser user) throws BadRequestException {
 
