@@ -1,10 +1,7 @@
 package com.ctx.assessment_service.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.UUID;
 
@@ -13,7 +10,7 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_student_quiz_question_response",
-                        columnNames = {"submission_id","question_id"}
+                        columnNames = {"submission_id", "question_id", "question_option_id"}
                 )
         }
 )
@@ -26,22 +23,27 @@ public class StudentQuizQuestionResponse { //Respose for each question
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID studentQuizQuestionResponseId;
 
-    private Boolean isCorrectOptionChosen;
-
     @ManyToOne
     @JoinColumn(name = "quiz_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Quiz quiz;
 
     @ManyToOne
     @JoinColumn(name = "question_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Question question;
 
     @ManyToOne
     @JoinColumn(name = "question_option_id")
-    private QuestionOption questionOption;  // We might need to create another table!!! IFF we accept multiple ans
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private QuestionOption questionOption;
 
     @ManyToOne
     @JoinColumn(name = "submission_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Submission submission;
-
 }

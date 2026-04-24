@@ -56,7 +56,7 @@ public class Submission {
     @OneToMany(mappedBy = "submission")
     private List<StudentQuizQuestionResponse> studentQuizQuestionResponseList;
 
-    @JoinColumn(nullable = false)
+    @Column(nullable = false)
     private Instant startedAt;
 
     @CreatedDate

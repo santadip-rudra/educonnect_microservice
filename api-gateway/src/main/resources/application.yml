@@ -5,12 +5,18 @@ spring:
   application:
     name: api-gateway
 
+
+  codec:
+    max-in-memory-size: 300MB
+
   cloud:
     gateway:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: "http://localhost:5173"
+            allowedOrigins:
+            - "http://localhost:5173"
+            - "http://localhost:3000"
             allowedMethods:
               - GET
               - POST
@@ -19,6 +25,13 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
+      httpclient:
+        pool:
+          max-connections: 500
+
+      filter:
+        adapt-cached-body:
+          enabled: false
 
       routes:
         # 1. Auth Service (no AuthFilter needed)

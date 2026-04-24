@@ -26,15 +26,16 @@ public class Quiz {
     @JoinColumn(name = "assessment_id")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private Assessment assessment ;
+    private Assessment assessment;
+
+    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OrderBy("position ASC")
+    private Set<Question> questionList;
 
     @OneToMany(mappedBy = "quiz")
     @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<Question> questionList;
-
-
-    @OneToMany(mappedBy = "quiz")
     @ToString.Exclude
     private List<StudentQuizQuestionResponse> studentQuizResponseList;
 
