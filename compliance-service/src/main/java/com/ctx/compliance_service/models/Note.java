@@ -12,17 +12,16 @@ import java.util.UUID;
 @Table(name = "compliance_notes")
 public class Note {
 
-    // primary key
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false,updatable = false)
-    private UUID NoteId;
+    @Column(nullable = false, updatable = false)
+    private UUID noteId;
 
     private String note;
 
     @ManyToOne
     @JoinColumn(name = "compliance_record")
-    @ToString.Exclude // Prevents infinite loop back to ComplianceRecord
+    @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private ComplianceRecord complianceRecord;
 }

@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-import org.hibernate.annotations.CurrentTimestamp;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,7 +16,7 @@ public class ComplianceRecord {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false,updatable = false)
+    @Column(nullable = false, updatable = false)
     private UUID complianceRecordId;
 
     private UUID userId;
@@ -25,12 +24,19 @@ public class ComplianceRecord {
     @Enumerated(EnumType.STRING)
     private ComplianceType type;
 
-    private String result;
+    @Enumerated(EnumType.STRING)
+    private ComplianceResult result;
+
     private LocalDate date;
 
-    @OneToMany(mappedBy = "complianceRecord")
-    @ToString.Exclude // Prevents infinite loop in logging/debugging
-    @EqualsAndHashCode.Exclude // Prevents infinite loop in collections
+    // cascade + orphanRemoval lets us manage notes by mutating this list;
+    // clearing the list deletes the notes, and adding new ones persists them.
+    @OneToMany(
+            mappedBy = "complianceRecord",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Note> notes = new ArrayList<>();
-
 }
