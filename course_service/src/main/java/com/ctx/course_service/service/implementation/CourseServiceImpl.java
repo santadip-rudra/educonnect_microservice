@@ -199,4 +199,12 @@ public class CourseServiceImpl implements CourseService {
     public List<CourseCompletionStatsDTO> getCourseCompletionStats(){
         return entityManagerRepo.getCourseCompletionStats();
     }
+
+    @Override
+    public List<CourseResponseDTO> searchCourse(String keyword) {
+         return  courseRepo.findByTitleContainingIgnoreCase(keyword)
+                 .stream()
+                 .map(course -> courseMapper.toResponseDTO(course))
+                 .toList();
+    }
 }
