@@ -26,4 +26,6 @@ public interface CourseRepo extends JpaRepository<Course, UUID> {
             LEFT JOIN FETCH c.enrollments e
             """)
     List<Course> findAllCoursesWithModulesAndEnrollments();
+
+    List<Course> findByTitleContainingIgnoreCase(String keyword);
 }

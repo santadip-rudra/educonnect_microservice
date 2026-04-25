@@ -21,4 +21,5 @@ public interface CourseService{
     List<CourseResponseDTO> getCoursesByTeacherId(UUID id);
 
     List<CourseCompletionStatsDTO> getCourseCompletionStats();
+    List<CourseResponseDTO> searchCourse(String keyword);
 }
