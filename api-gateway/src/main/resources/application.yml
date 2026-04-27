@@ -83,7 +83,7 @@ spring:
         - id: student_registry_service
           uri: lb://student-registry-service
           predicates:
-            - Path=/demographics/**, /v2/api/docs/**, /attendance/**
+            - Path=/demographics/**, /v2/api/docs/**, /attendance/**, /student-registry/**
           filters:
             - name: AuthenticationFilter
               args:
