@@ -35,11 +35,11 @@ public class Assessment {
     private UUID courseId;
 
     @ToString.Exclude
-    @OneToOne(mappedBy = "assessment")
+    @OneToOne(mappedBy = "assessment", cascade = CascadeType.ALL, orphanRemoval = true)
     private Assignment assignment;
 
     @ToString.Exclude
-    @OneToOne(mappedBy = "assessment")
+    @OneToOne(mappedBy = "assessment", cascade = CascadeType.ALL, orphanRemoval = true)
     private Quiz quiz;
 
     @CreatedDate

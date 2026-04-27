@@ -15,6 +15,14 @@ spring:
       hibernate:
         format_sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 300MB
+      max-request-size: 300MB
+    formcontent:
+      filter:
+        enabled: false
+
 server:
   port: 8085
 

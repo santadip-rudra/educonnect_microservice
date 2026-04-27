@@ -179,5 +179,10 @@ public class CourseController {
                 courseService.getCourseCompletionStats()
         );
     }
+    @GetMapping("/search-courses")
+    public ResponseEntity<List<CourseResponseDTO>> searchCourses(@RequestParam  String keyword)
+    {
+        return ResponseEntity.ok(courseService.searchCourse(keyword));
+    }
 
 }

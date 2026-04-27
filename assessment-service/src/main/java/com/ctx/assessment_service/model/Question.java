@@ -13,6 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Question {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID questionId;
@@ -21,14 +22,19 @@ public class Question {
 
     @ManyToOne
     @JoinColumn(name = "quiz_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Quiz quiz;
+
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @OrderBy("position ASC")
+    private Set<QuestionOption> questionOptionList;
 
     @OneToMany(mappedBy = "question")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private Set<QuestionOption> questionOptionList;
-
-    @OneToMany(mappedBy = "question")
     private List<StudentQuizQuestionResponse> studentQuizQuestionResponseList;
 
     @Lob
@@ -36,6 +42,7 @@ public class Question {
     @Basic(fetch = FetchType.LAZY)
     private byte[] imageBinData;
 
+    @Builder.Default
     private Boolean hasImage = false;
 
     @Column(nullable = true)
@@ -44,4 +51,17 @@ public class Question {
     @Column(nullable = true)
     private String imageFileName;
 
+    @Column(nullable = true, columnDefinition = "INT DEFAULT 10")
+    private Integer marks;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isMultiOption = false;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isPartMarkingAllowed = false;
+
+    @Column(nullable = true)
+    private Integer position;
 }
