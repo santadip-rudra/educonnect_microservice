@@ -8,6 +8,9 @@ spring:
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  config:
+    import: optional:classpath:application-secret.properties
+
   jpa:
     hibernate:
       ddl-auto: update

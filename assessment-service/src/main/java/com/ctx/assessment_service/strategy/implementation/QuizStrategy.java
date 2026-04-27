@@ -384,7 +384,10 @@ public class QuizStrategy implements AssessmentStrategy {
             Question question = questionRepo.findById(answerDTO.getQuestionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
-            for (UUID selectedOptionId : answerDTO.getQuestionOptionIds()) {
+            List<UUID> optionIds = answerDTO.getQuestionOptionIds();
+            if (optionIds == null || optionIds.isEmpty()) continue;
+
+            for (UUID selectedOptionId : optionIds) {
 
                 QuestionOption questionOption = questionOptionRepo.findById(selectedOptionId)
                         .orElseThrow(() -> new ResourceNotFoundException("Option not found"));
