@@ -1,19 +1,18 @@
 package com.ctx.student_registry_service.dto.course;
 
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 import java.util.UUID;
 
-
-public record CourseResponseDto (
-        @NotBlank   UUID courseId,
-        @NotBlank
+public record CourseResponseDto(
+        UUID courseId,
         String title,
-        @NotBlank String description,
-        @NotBlank  String courseCode,
-        @NotBlank   Double duration,
-        @NotBlank UUID teacherId,
-        List<ModuleResponseDto> moduleResponseDTO
-){
+        String description,
+        String courseCode,
+        Double duration,
+        UUID teacherId,
+        @JsonProperty("moduleResponseDTOList")
+        List<ModuleResponseDto> modules
+) {
 }

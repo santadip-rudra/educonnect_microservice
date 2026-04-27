@@ -59,6 +59,7 @@ public class TeacherUserStrategy implements UserStrategy {
         return TeacherResponse.builder()
                 .teacherId(userId)
                 .role("TEACHER")
+                .fullName(teacher.getFullName())
                 .department(teacher.getDepartment())
                 .qualification(teacher.getQualification())
                 .build();
@@ -72,6 +73,7 @@ public class TeacherUserStrategy implements UserStrategy {
     private UserResponse mapToResponse(Teacher teacher) {
         TeacherResponse response = new TeacherResponse();
         response.setTeacherId(teacher.getTeacherId());
+        response.setFullName(teacher.getFullName());
         response.setDepartment(teacher.getDepartment());
         response.setQualification(teacher.getQualification());
         return response;
