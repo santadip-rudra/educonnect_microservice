@@ -66,7 +66,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getDescription(),
                 course.getDuration(),
                 course.getCourseId(),
-                enrollment.getEnrollmentStatus().name()
+                enrollment.getEnrollmentStatus().name(),
+                enrollment.getFinalGrade()
         );
     }
 
@@ -103,7 +104,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                             enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "",
                             enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0,
                             enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null,
-                            enrollment.getEnrollmentStatus() != null ? enrollment.getEnrollmentStatus().name() : "PENDING"
+                            enrollment.getEnrollmentStatus() != null ? enrollment.getEnrollmentStatus().name() : "PENDING",
+                            enrollment.getFinalGrade() != null ? enrollment.getFinalGrade() : null
                     ))
                     .collect(Collectors.toList());
 
@@ -209,7 +211,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                     course.getTeacherId(),
                     moduleResponseDTOList,
                     assessmentResponseDTOList,
-                    enrollmentResponseDTOServeList
+                    enrollmentResponseDTOServeList,
+                    course.getCredit()
             );
 
             courseResponseDTOList.add(courseResponseDTO);
@@ -252,7 +255,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getDescription(),
                 course.getDuration(),
                 course.getCourseId(),
-                "PENDING"
+                "PENDING",
+                enrollment.getFinalGrade()
         );
     }
 
@@ -272,7 +276,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 enrollment.getCourse().getDescription(),
                 enrollment.getCourse().getDuration(),
                 enrollment.getCourse().getCourseId(),
-                "APPROVED"
+                "APPROVED",
+                enrollment.getFinalGrade()
         );
     }
 
@@ -292,7 +297,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 enrollment.getCourse().getDescription(),
                 enrollment.getCourse().getDuration(),
                 enrollment.getCourse().getCourseId(),
-                "REJECTED"
+                "REJECTED",
+                enrollment.getFinalGrade()
         );
     }
 }

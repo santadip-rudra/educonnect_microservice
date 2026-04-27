@@ -19,4 +19,5 @@ public class EnrollmentResponseDTO {
     private Double durationInSec;
     private UUID courseId;
     private String enrollmentStatus;
+    private Double finalGrade;
 }
