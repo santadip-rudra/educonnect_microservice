@@ -26,7 +26,7 @@ public class DemographicsController {
     }
 
     @GetMapping("{studentId}")
-    @PreAuthorize("hasAnyRole('STUDENT', 'PARENT')")
+    @PreAuthorize("hasAnyAuthority('ROLE_STUDENT', 'ROLE_PARENT')")
     public ResponseEntity<StudentDemographics> findDemographicsByStudentId(@PathVariable UUID studentId) throws Exception {
       return ResponseEntity.ok(studentDemographicsService.findDemographicsById(studentId));
     }

@@ -10,6 +10,6 @@ import java.util.UUID;
 @FeignClient(name = "course-service")
 public interface CourseServiceClient {
 
-    @GetMapping("/enroll/student/{studentId}")
+    @GetMapping("/enroll/student/{studentId}/all")
     CourseEnrollmentResponse getStudentEnrollments(@PathVariable UUID studentId);
 }
