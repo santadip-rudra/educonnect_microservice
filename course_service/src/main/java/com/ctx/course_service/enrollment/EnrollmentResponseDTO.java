@@ -18,5 +18,6 @@ public class EnrollmentResponseDTO {
     private String courseDescription;
     private Double durationInSec;
     private UUID courseId;
+    private UUID teacherId;
     private String enrollmentStatus;
 }
