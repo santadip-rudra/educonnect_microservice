@@ -19,12 +19,14 @@ public class ComplianceRecordController {
     private final ComplianceService complianceService;
 
     @GetMapping("test")
-    public String test(){
+    public String test() {
         return "test";
     }
+
     // POST: Create a new record
     @PostMapping
-    public ResponseEntity<ComplianceRecordResponseDTO> createRecord(@RequestBody ComplianceRecordRequestDTO dto) throws  UserNotFoundException {
+    public ResponseEntity<ComplianceRecordResponseDTO> createRecord(
+            @RequestBody ComplianceRecordRequestDTO dto) throws UserNotFoundException {
         return new ResponseEntity<>(complianceService.createRecord(dto), HttpStatus.CREATED);
     }
 
@@ -46,5 +48,12 @@ public class ComplianceRecordController {
     @GetMapping
     public ResponseEntity<List<ComplianceRecordResponseDTO>> getAllRecords() {
         return ResponseEntity.ok(complianceService.getAllRecords());
+    }
+
+    // DELETE: Remove a record (frontend expects this)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRecord(@PathVariable UUID id) {
+        complianceService.deleteRecord(id);
+        return ResponseEntity.noContent().build();
     }
 }

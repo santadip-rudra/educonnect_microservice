@@ -384,7 +384,10 @@ public class QuizStrategy implements AssessmentStrategy {
             Question question = questionRepo.findById(answerDTO.getQuestionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
-            for (UUID selectedOptionId : answerDTO.getQuestionOptionIds()) {
+            List<UUID> optionIds = answerDTO.getQuestionOptionIds();
+            if (optionIds == null || optionIds.isEmpty()) continue;
+
+            for (UUID selectedOptionId : optionIds) {
 
                 QuestionOption questionOption = questionOptionRepo.findById(selectedOptionId)
                         .orElseThrow(() -> new ResourceNotFoundException("Option not found"));
@@ -457,10 +460,6 @@ public class QuizStrategy implements AssessmentStrategy {
 
 
     @Override
-    // REQUIRES_NEW gives this method its own transaction.
-    // When DataIntegrityViolationException is thrown by saveAndFlush, the inner
-    // transaction rolls back cleanly, and the catch block's re-query runs in a
-    // fresh context that can see the committed row from a concurrent request.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
 

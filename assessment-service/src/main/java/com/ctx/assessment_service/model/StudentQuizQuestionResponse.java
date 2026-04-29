@@ -18,7 +18,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class StudentQuizQuestionResponse { //Respose for each question
+public class StudentQuizQuestionResponse { //Respose for each question (options actually)
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID studentQuizQuestionResponseId;

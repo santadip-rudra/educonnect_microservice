@@ -1,11 +1,13 @@
 package com.educonnect_microservice.parent_access_service.controller;
 
+import com.educonnect_microservice.parent_access_service.dto.ChildSummaryDto;
 import com.educonnect_microservice.parent_access_service.service.ParentAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,5 +51,18 @@ public class ParentAccessController {
     public ResponseEntity<String> verify(@RequestParam String token){
         parentAccessService.verifyParent(token);
         return ResponseEntity.ok("Parent verified successfully");
+    }
+
+    @GetMapping("/check-verification")
+    public ResponseEntity<Map> checkVerification(@RequestParam UUID parentId){
+        boolean verified = parentAccessService.isVerified(parentId);
+        Map<String,Object> response = new HashMap<>();
+        response.put("verified", verified);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/children")
+    public ResponseEntity<List<ChildSummaryDto>> getChildren(@RequestParam UUID parentId){
+        return ResponseEntity.ok(parentAccessService.getChildren(parentId));
     }
 }
