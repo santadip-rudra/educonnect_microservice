@@ -40,4 +40,5 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class UserResponse {
     String role;
+    String fullName;
 }

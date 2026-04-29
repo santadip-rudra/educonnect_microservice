@@ -22,6 +22,7 @@ public class TeacherMapper {
 
         return TeacherResponse.builder()
                 .teacherId(teacher.getTeacherId())
+                .fullName(teacher.getFullName())
                 .department(teacher.getDepartment())
                 .qualification(teacher.getQualification())
                 .fullName(teacher.getFullName())
