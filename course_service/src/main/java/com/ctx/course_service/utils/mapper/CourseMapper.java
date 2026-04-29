@@ -46,7 +46,8 @@ public class CourseMapper implements Mapper<Course, CourseRequestDTO, CourseResp
                 entity.getTeacherId(),
                 module,
                 Collections.emptyList(),
-                Collections.emptyList()
+                Collections.emptyList(),
+                entity.getCredit()
         );
     }
 
