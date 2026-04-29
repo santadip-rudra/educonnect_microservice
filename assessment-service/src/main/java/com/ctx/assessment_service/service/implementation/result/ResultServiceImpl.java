@@ -51,8 +51,6 @@ public class ResultServiceImpl implements ResultService {
         List<StudentQuizQuestionResponse> responseList =
                 studentQuizQuestionResponseRepo.findAllBySubmission(submission);
 
-        // [CHANGED] was a simple correct/total ratio — now computes per-question
-        // scores using marks and partial marking rules, then sums to a total.
         double totalEarned  = 0.0;
         double totalPossible = 0.0;
 
@@ -77,7 +75,6 @@ public class ResultServiceImpl implements ResultService {
             totalEarned += computeQuestionScore(question, correctIds, chosenIds);
         }
 
-        // percentageScore = earned / possible (0.0–1.0), or 0 if no marks defined
         double percentageScore = (totalPossible == 0) ? 0.0 : totalEarned / totalPossible;
 
         Result result = new Result();
@@ -94,16 +91,13 @@ public class ResultServiceImpl implements ResultService {
         return "result computed successfully";
     }
 
-    // ── [ADDED] per-question scoring with partial marking support ─────────────
     private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
         int marks = question.getMarks() != null ? question.getMarks() : 0;
 
         if (!Boolean.TRUE.equals(question.getIsMultiOption())) {
-            // single-option: full marks or zero
             return correctIds.equals(chosenIds) ? marks : 0.0;
         }
 
-        // multi-option: any wrongly selected option = zero immediately
         long incorrectlyChosen = chosenIds.stream()
                 .filter(id -> !correctIds.contains(id))
                 .count();
@@ -116,11 +110,10 @@ public class ResultServiceImpl implements ResultService {
         if (correctlyChosen == correctIds.size()) return marks; // all correct → full marks
 
         if (Boolean.TRUE.equals(question.getIsPartMarkingAllowed())) {
-            // partial credit: (correctSelected / totalCorrect) × marks
             return ((double) correctlyChosen / correctIds.size()) * marks;
         }
 
-        return 0.0; // partial marking not allowed — must get all correct
+        return 0.0;
     }
 
     @Override

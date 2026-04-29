@@ -17,4 +17,5 @@ public class TeacherResponse extends UserResponse {
     private UUID teacherId;
     private String department;
     private String qualification;
+    private String fullName;
 }

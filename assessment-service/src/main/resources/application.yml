@@ -22,6 +22,12 @@ spring:
       filter:
         enabled: false
 
+  cloud:
+    openfeign:
+      httpclient:
+        hc5:
+          enabled: true
+
 server:
   port: 8085
 
