@@ -25,6 +25,7 @@ public class TeacherMapper {
                 .fullName(teacher.getFullName())
                 .department(teacher.getDepartment())
                 .qualification(teacher.getQualification())
+                .fullName(teacher.getFullName())
                 .build();
     }
 
