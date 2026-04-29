@@ -15,6 +15,7 @@ import com.ctx.assessment_service.dto.image.serve.ImageStreamDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
 import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
+import com.ctx.assessment_service.exception.custom_exceptions.UserNotFoundException;
 import com.ctx.assessment_service.factory.AssessmentFactory;
 import com.ctx.assessment_service.service.contract.assessment.AssessmentService;
 import com.ctx.assessment_service.service.contract.image.ImageService;
@@ -394,6 +395,35 @@ public class AssessmentController {
                 new GenericResponse<>(
                         Map.of("message", "Assessment deleted successfully"),
                         "Assessment deleted",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
+    @PatchMapping("/result/{assessmentType}/{assessmentId}/{studentId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<GenericResponse<Map<String, String>>> evaluateStudent(
+            @PathVariable("assessmentType") String assessmentType,
+            @PathVariable("assessmentId") UUID assessmentId,
+            @PathVariable("studentId") UUID studentId,
+            @RequestBody Map<String, Double> body,
+            @AuthenticationPrincipal CurrentUser teacher
+    ) throws BadRequestException, UserNotFoundException, UserNotFoundException {
+
+        Double givenScore = body.get("givenScore");
+        if (givenScore == null) {
+            throw new BadRequestException("givenScore is required");
+        }
+
+        String message = resultService.evaluateStudent(
+                assessmentId, studentId, teacher, givenScore
+        );
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        Map.of("message", message),
+                        message,
                         HttpStatus.OK.value(),
                         LocalDateTime.now()
                 )

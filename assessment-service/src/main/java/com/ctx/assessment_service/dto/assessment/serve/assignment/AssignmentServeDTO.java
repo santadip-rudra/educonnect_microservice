@@ -4,7 +4,6 @@ package com.ctx.assessment_service.dto.assessment.serve.assignment;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.apache.commons.text.translate.UnicodeUnescaper;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,4 +20,5 @@ public class AssignmentServeDTO extends AssessmentServeDTO {
     private String submissionId;
     private List<String> attachmentUris;
     private Integer attemptCount;
+    private Double maxScore;
 }
