@@ -8,6 +8,7 @@ import com.ctx.user_management_service.repo.StudentRepo;
 import com.ctx.user_management_service.utils.StudentMapper;
 import com.ctx.user_management_service.utils.UpdateUtil;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -53,5 +54,10 @@ public class StudentService {
 
     public  Boolean exists(UUID studentId){
         return studentRepo.existsById(studentId);
+    }
+
+    public @Nullable StudentResponse findByEnrollmentNumber(String enrollmentNumber) {
+        return studentRepo.<Student>findByEnrollmentNumber(enrollmentNumber)
+                .map(mapper::toResponseDTO).orElseThrow(()->new UserNotFoundException("Student does not Exist"));
     }
 }

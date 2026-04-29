@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
 
+import java.util.UUID;
+
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME,property = "assessmentType", visible = true)
 @JsonSubTypes(
         {
@@ -25,4 +27,6 @@ import lombok.Data;
 public class AssessmentReportDTO {
     private String title;
     private AssessmentType assessmentType;
+    private UUID assessmentId;
+    private UUID studentId;
 }

@@ -66,6 +66,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getDescription(),
                 course.getDuration(),
                 course.getCourseId(),
+                course.getTeacherId(),
                 enrollment.getEnrollmentStatus().name()
         );
     }
@@ -103,6 +104,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                             enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "",
                             enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0,
                             enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null,
+                            enrollment.getCourse() != null ? enrollment.getCourse().getTeacherId() : null,
                             enrollment.getEnrollmentStatus() != null ? enrollment.getEnrollmentStatus().name() : "PENDING"
                     ))
                     .collect(Collectors.toList());
@@ -252,6 +254,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getDescription(),
                 course.getDuration(),
                 course.getCourseId(),
+                course.getTeacherId(),
                 "PENDING"
         );
     }
@@ -272,6 +275,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 enrollment.getCourse().getDescription(),
                 enrollment.getCourse().getDuration(),
                 enrollment.getCourse().getCourseId(),
+                enrollment.getCourse().getTeacherId(),
                 "APPROVED"
         );
     }
@@ -292,6 +296,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 enrollment.getCourse().getDescription(),
                 enrollment.getCourse().getDuration(),
                 enrollment.getCourse().getCourseId(),
+                enrollment.getCourse().getTeacherId(),
                 "REJECTED"
         );
     }

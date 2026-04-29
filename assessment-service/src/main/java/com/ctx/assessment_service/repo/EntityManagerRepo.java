@@ -30,8 +30,7 @@ public class EntityManagerRepo {
         COUNT(r.resultId),
         MAX(r.percentageScore)
         FROM Result r
-        WHERE r.createdAt IS NOT NULL
-        AND r.percentageScore IS NOT NULL
+        WHERE r.createdAt IS NOT NULL AND r.percentageScore IS NOT NULL
         GROUP BY EXTRACT(YEAR FROM r.createdAt), EXTRACT(MONTH FROM r.createdAt)
         ORDER BY EXTRACT(YEAR FROM r.createdAt) ASC, EXTRACT(MONTH FROM r.createdAt) ASC
         """;
@@ -128,9 +127,9 @@ public class EntityManagerRepo {
         """;
 
         List<Object[]> rows = entityManager.createQuery(jpql)
-                .setParameter("passed", ResultStatus.PASSED)
-                .setParameter("failed", ResultStatus.FAILED)
-                .getResultList();
+                                .setParameter("passed", ResultStatus.PASSED)
+                                .setParameter("failed", ResultStatus.FAILED)
+                                .getResultList();
 
 
 
