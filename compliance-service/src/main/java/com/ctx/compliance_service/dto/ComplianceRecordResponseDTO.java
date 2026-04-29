@@ -1,5 +1,6 @@
 package com.ctx.compliance_service.dto;
 
+import com.ctx.compliance_service.models.ComplianceResult;
 import com.ctx.compliance_service.models.ComplianceType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,7 +17,7 @@ public class ComplianceRecordResponseDTO {
     private UUID complianceRecordID;
     private UUID userId;
     private ComplianceType type;
-    private String result;
+    private ComplianceResult result;
     private LocalDate date;
     private List<String> notes;
 }
