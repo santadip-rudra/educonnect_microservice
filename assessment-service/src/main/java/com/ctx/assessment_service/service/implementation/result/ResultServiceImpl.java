@@ -7,6 +7,7 @@ import com.ctx.assessment_service.dto.result.CoursePassFailStatsDTO;
 import org.springframework.transaction.annotation.Transactional;
 import com.ctx.assessment_service.dto.external_response.CourseResponse;
 import com.ctx.assessment_service.dto.external_response.StudentResponse;
+import com.ctx.assessment_service.dto.external_response.TeacherResponse;
 import com.ctx.assessment_service.dto.result.MonthlyAssessmentStatsDTO;
 import com.ctx.assessment_service.dto.result.MonthlyExamStatsDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
@@ -237,19 +238,43 @@ public class ResultServiceImpl implements ResultService {
 
         List<Result> results = resultRepo.findAllByStudentId(studentId);
 
-        return results.stream().map(r -> StudentResultDTO.builder()
-                .resultId(r.getResultId())
-                .studentId(r.getStudentId())
-                .percentageScore(r.getPercentageScore())
-                .status(r.getStatus() != null ? r.getStatus().name() : null)
-                .assessmentId(r.getAssessment() != null ? r.getAssessment().getAssessmentId() : null)
-                .assessmentTitle(r.getAssessment() != null ? r.getAssessment().getTitle() : null)
-                .maxScore(r.getAssessment() != null ? r.getAssessment().getMaxScore() : null)
-                .assessmentType(r.getAssessment() != null ? r.getAssessment().getType().name() : null)
-                .courseId(r.getAssessment() != null ? r.getAssessment().getCourseId() : null)
-                .submissionId(r.getSubmission() != null ? r.getSubmission().getSubmissionId() : null)
-                .build()
-        ).toList();
+        // build courseId → teacherName map with one call per unique course
+        Map<UUID, String> teacherNameByCourseId = new HashMap<>();
+        for (Result r : results) {
+            if (r.getAssessment() == null) continue;
+            UUID courseId = r.getAssessment().getCourseId();
+            if (teacherNameByCourseId.containsKey(courseId)) continue;
+            try {
+                CourseResponse course = courseServiceClient.getcourse(courseId);
+                if (course != null && course.getTeacherId() != null) {
+                    TeacherResponse teacher =
+                            userManagementServiceClient.findByTeacherId(course.getTeacherId());
+                    teacherNameByCourseId.put(courseId, teacher != null ? teacher.getFullName() : null);
+                } else {
+                    teacherNameByCourseId.put(courseId, null);
+                }
+            } catch (Exception e) {
+                log.warn("Could not resolve teacher for courseId={}: {}", courseId, e.getMessage());
+                teacherNameByCourseId.put(courseId, null);
+            }
+        }
+
+        return results.stream().map(r -> {
+            UUID courseId = r.getAssessment() != null ? r.getAssessment().getCourseId() : null;
+            return StudentResultDTO.builder()
+                    .resultId(r.getResultId())
+                    .studentId(r.getStudentId())
+                    .percentageScore(r.getPercentageScore())
+                    .status(r.getStatus() != null ? r.getStatus().name() : null)
+                    .assessmentId(r.getAssessment() != null ? r.getAssessment().getAssessmentId() : null)
+                    .assessmentTitle(r.getAssessment() != null ? r.getAssessment().getTitle() : null)
+                    .teacherName(courseId != null ? teacherNameByCourseId.get(courseId) : null)
+                    .maxScore(r.getAssessment() != null ? r.getAssessment().getMaxScore() : null)
+                    .assessmentType(r.getAssessment() != null ? r.getAssessment().getType().name() : null)
+                    .courseId(courseId)
+                    .submissionId(r.getSubmission() != null ? r.getSubmission().getSubmissionId() : null)
+                    .build();
+        }).toList();
     }
 
     @Override

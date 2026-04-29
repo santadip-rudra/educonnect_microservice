@@ -1,5 +1,9 @@
 package com.educonnect_microservice.parent_access_service.serviceImpl;
 
+import com.educonnect_microservice.parent_access_service.client.CourseServiceClient;
+import com.educonnect_microservice.parent_access_service.client.StudentRegistryClient;
+import com.educonnect_microservice.parent_access_service.client.UserManagementClient;
+import com.educonnect_microservice.parent_access_service.dto.*;
 import com.educonnect_microservice.parent_access_service.entity.ParentStudentMapping;
 import com.educonnect_microservice.parent_access_service.entity.ParentVerificationToken;
 import com.educonnect_microservice.parent_access_service.repo.ParentStudentRepo;
@@ -9,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -16,6 +22,9 @@ import java.util.UUID;
 public class ParentAccessServiceImpl implements ParentAccessService {
     private final ParentStudentRepo mappingRepo;
     private final ParentVerificationTokenRepo tokenRepo;
+    private final UserManagementClient userManagementClient;
+    private final StudentRegistryClient studentRegistryClient;
+    private final CourseServiceClient courseServiceClient;
     @Override
     public void linkParent(UUID parentId, UUID studentId){
         tokenRepo.findByParentIdAndVerifiedTrue(parentId)
@@ -80,5 +89,60 @@ public class ParentAccessServiceImpl implements ParentAccessService {
         parentStudentMapping.setParentId(parentId);
         parentStudentMapping.setStudentId(studentId);
         mappingRepo.save(parentStudentMapping);
+    }
+
+    @Override
+    public boolean isVerified(UUID parentId) {
+        return tokenRepo.findByParentIdAndVerifiedTrue(parentId).isPresent();
+    }
+
+    @Override
+    public List<ChildSummaryDto> getChildren(UUID parentId) {
+        List<ParentStudentMapping> mappings = mappingRepo.findByParentId(parentId);
+        return mappings.stream()
+                .map(mapping -> buildChildSummary(mapping.getStudentId()))
+                .toList();
+    }
+
+    private ChildSummaryDto buildChildSummary(UUID studentId) {
+        // Fetch student profile
+        StudentProfileDto profile = null;
+        try {
+            profile = userManagementClient.getStudentProfile(studentId);
+        } catch (Exception ignored) {}
+
+        // Fetch attendance and compute percentage
+        Integer attendancePct = null;
+        try {
+            List<AttendanceRecordDto> records = studentRegistryClient.getAttendanceByStudent(studentId);
+            if (records != null && !records.isEmpty()) {
+                long present = records.stream()
+                        .filter(r -> "PRESENT".equalsIgnoreCase(r.status()))
+                        .count();
+                attendancePct = (int) Math.round((present * 100.0) / records.size());
+            }
+        } catch (Exception ignored) {}
+
+        // Fetch enrolled courses
+        List<EnrolledCourseDto> enrolledCourses = Collections.emptyList();
+        try {
+            CourseEnrollmentResponse enrollmentResponse = courseServiceClient.getStudentEnrollments(studentId);
+            if (enrollmentResponse != null && enrollmentResponse.getData() != null) {
+                enrolledCourses = enrollmentResponse.getData().stream()
+                        .map(e -> new EnrolledCourseDto(e.getCourseId(), e.getCourseName(), null))
+                        .toList();
+            }
+        } catch (Exception ignored) {}
+
+        return ChildSummaryDto.builder()
+                .studentId(studentId)
+                .name(profile != null ? profile.getFullName() : null)
+                .gradeLevel(null)
+                .dateOfBirth(profile != null ? profile.getDateOfBirth() : null)
+                .email(profile != null ? profile.getEmail() : null)
+                .gpa(null)
+                .attendance(attendancePct)
+                .enrolledCourses(enrolledCourses)
+                .build();
     }
 }

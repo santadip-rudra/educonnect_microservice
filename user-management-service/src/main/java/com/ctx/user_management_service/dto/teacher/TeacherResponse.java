@@ -15,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class TeacherResponse extends UserResponse {
     private UUID teacherId;
+    private String fullName;
     private String department;
     private String qualification;
     private String fullName;
