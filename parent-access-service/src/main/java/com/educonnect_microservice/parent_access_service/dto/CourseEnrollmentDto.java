@@ -1,24 +1,19 @@
-package com.ctx.course_service.enrollment;
+package com.educonnect_microservice.parent_access_service.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class EnrollmentResponseDTO {
-    private UUID enrollmentId;
+public class CourseEnrollmentDto {
     private String courseName;
     private String studentName;
     private String courseDescription;
     private Double durationInSec;
-    private UUID courseId;
-    private UUID teacherId;
-    private String enrollmentStatus;
+    // Extended fields for grade tracking
+    private String courseId;
+    private Double progress;
     private Double finalGrade;
 }

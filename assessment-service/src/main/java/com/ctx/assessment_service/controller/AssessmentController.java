@@ -15,6 +15,7 @@ import com.ctx.assessment_service.dto.image.serve.ImageStreamDTO;
 import com.ctx.assessment_service.dto.user.CurrentUser;
 import com.ctx.assessment_service.exception.custom_exceptions.DocumentProcessingException;
 import com.ctx.assessment_service.exception.custom_exceptions.ResourceNotFoundException;
+import com.ctx.assessment_service.exception.custom_exceptions.UserNotFoundException;
 import com.ctx.assessment_service.factory.AssessmentFactory;
 import com.ctx.assessment_service.service.contract.assessment.AssessmentService;
 import com.ctx.assessment_service.service.contract.image.ImageService;
@@ -144,7 +145,7 @@ public class AssessmentController {
     public ResponseEntity<GenericResponse<Map<String,String>>> submitAssessment(
             @RequestPart("request") AssessmentRequestDTO dto ,
             @AuthenticationPrincipal  CurrentUser user,
-            @RequestPart("files") @Nullable  MultipartFile[] files
+            @RequestPart(value = "files", required = false) MultipartFile[] files
     ) throws BadRequestException, DocumentProcessingException {
 
         if(files != null && files.length != 0){
@@ -305,8 +306,26 @@ public class AssessmentController {
         );
     }
 
+    @PatchMapping("/grade/{assessmentId}/{studentId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<?> gradeAssignment(
+            @PathVariable UUID assessmentId,
+            @PathVariable UUID studentId,
+            @RequestParam double givenScore,
+            @AuthenticationPrincipal CurrentUser teacher
+    ) throws BadRequestException, UserNotFoundException {
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        resultService.evaluateStudent(assessmentId, studentId, teacher, givenScore),
+                        "Assignment graded successfully",
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
+
     @GetMapping("/results/student/{studentId}")
-    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('TEACHER') or hasRole('ADMIN') or hasRole('PARENT')")
     public ResponseEntity<?> getStudentResults(
             @PathVariable UUID studentId,
             @AuthenticationPrincipal CurrentUser user) throws BadRequestException {

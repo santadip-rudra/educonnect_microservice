@@ -394,6 +394,8 @@ public class AssignmentStrategy implements AssessmentStrategy {
         report.setTitle(submission.getAssessment().getTitle());
         report.setAssessmentType(AssessmentType.ASSIGNMENT);
         report.setNoOfDocumentsUploaded(submission.getAssignmentAttachmentList().size());
+        report.setAssessmentId(submission.getAssessment().getAssessmentId());
+        report.setStudentId(submission.getStudentId());
 
         report.setDueDate(submission.getAssessment().getAssignment().getDueDate());
         report.setIsLate(submission.getIsLate());

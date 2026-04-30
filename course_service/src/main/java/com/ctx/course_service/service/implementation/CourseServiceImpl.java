@@ -186,7 +186,8 @@ public class CourseServiceImpl implements CourseService {
                     course.getTeacherId(),
                     moduleResponseDTOList,
                     assessmentResponseDTOList,
-                    enrollmentResponseDTOServeList
+                    enrollmentResponseDTOServeList,
+                    course.getCredit()
             );
 
             courseResponseDTOList.add(courseResponseDTO);

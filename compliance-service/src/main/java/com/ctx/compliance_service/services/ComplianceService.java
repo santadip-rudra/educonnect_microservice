@@ -1,9 +1,7 @@
 package com.ctx.compliance_service.services;
 
-import com.ctx.compliance_service.client.UserClient;
 import com.ctx.compliance_service.dto.ComplianceRecordRequestDTO;
 import com.ctx.compliance_service.dto.ComplianceRecordResponseDTO;
-import com.ctx.compliance_service.dto.UserResponse;
 import com.ctx.compliance_service.exceptions.custom.ComplianceRecordNotFoundException;
 import com.ctx.compliance_service.exceptions.custom.UserNotFoundException;
 import com.ctx.compliance_service.models.ComplianceRecord;
@@ -38,37 +36,32 @@ public class ComplianceService {
                 ? dto.getDate()
                 : LocalDate.now(ZoneId.of("Asia/Kolkata"));
         record.setDate(effectiveDate);
-        // Save record first
-        ComplianceRecord savedRecord = recordRepository.save(record);
 
-        // Add notes if present
+        // Add notes to the entity; cascade = ALL will persist them with the record.
         if (dto.getNotes() != null) {
             dto.getNotes().forEach(text -> {
                 Note note = new Note();
                 note.setNote(text);
-                note.setComplianceRecord(savedRecord);
-                noteRepository.save(note); // Persist note
-                savedRecord.getNotes().add(note); // Sync memory
+                note.setComplianceRecord(record);
+                record.getNotes().add(note);
             });
         }
 
-        return mapToDTO(savedRecord);
+        ComplianceRecord saved = recordRepository.save(record);
+        return mapToDTO(saved);
     }
 
     public ComplianceRecordResponseDTO getRecordById(UUID id) {
         ComplianceRecord record = recordRepository.findById(id)
                 .orElseThrow(() -> new ComplianceRecordNotFoundException("Record not found: " + id));
-        // Just map the found entity to DTO and return it
         return mapToDTO(record);
     }
 
-
     public List<ComplianceRecordResponseDTO> getAllRecords() {
         return recordRepository.findAll().stream()
-                .map(this::mapToDTO) // Direct mapping
+                .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-
 
     @Transactional
     public ComplianceRecordResponseDTO updateRecord(UUID id, ComplianceRecordRequestDTO dto) {
@@ -82,8 +75,7 @@ public class ComplianceService {
             record.setDate(dto.getDate());
         }
 
-        // Handle Notes
-        noteRepository.deleteAll(record.getNotes());
+        // With orphanRemoval = true, clearing the list deletes the notes from the DB.
         record.getNotes().clear();
 
         if (dto.getNotes() != null) {
@@ -91,15 +83,23 @@ public class ComplianceService {
                 Note note = new Note();
                 note.setNote(text);
                 note.setComplianceRecord(record);
-                noteRepository.save(note);
-                record.getNotes().add(note); // Keep memory in sync
+                record.getNotes().add(note);
             });
         }
 
         ComplianceRecord updated = recordRepository.save(record);
-        return mapToDTO(updated); // Use the helper, NOT getRecordById()
+        return mapToDTO(updated);
     }
-    // HELPER METHOD: Converts Entity to DTO safely
+
+    @Transactional
+    public void deleteRecord(UUID id) {
+        ComplianceRecord record = recordRepository.findById(id)
+                .orElseThrow(() -> new ComplianceRecordNotFoundException("Cannot delete. Record not found: " + id));
+        // cascade = ALL on notes removes them automatically
+        recordRepository.delete(record);
+    }
+
+    // HELPER: Converts Entity to DTO safely
     private ComplianceRecordResponseDTO mapToDTO(ComplianceRecord record) {
         ComplianceRecordResponseDTO dto = new ComplianceRecordResponseDTO();
         dto.setComplianceRecordID(record.getComplianceRecordId());

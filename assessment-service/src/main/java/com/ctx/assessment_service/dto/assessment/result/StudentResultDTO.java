@@ -21,6 +21,7 @@ public class StudentResultDTO {
     private String status;
     private UUID assessmentId;
     private String assessmentTitle;
+    private String teacherName;
     private Double maxScore;
     private String assessmentType;
     private UUID courseId;

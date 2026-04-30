@@ -169,11 +169,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 new ErrorResponseDTO(
                         LocalDateTime.now(),
-                        HttpStatus.BAD_REQUEST.value(),
+                        HttpStatus.NOT_FOUND.value(),
                         ex.getMessage(),
                         ex.getLocalizedMessage()
                 ),
-                HttpStatus.BAD_REQUEST
+                HttpStatus.NOT_FOUND
         );
     }
 
