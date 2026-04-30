@@ -29,7 +29,7 @@ import java.util.UUID;
 public class DocumentController {
 
 
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT','PARENT')")
     @GetMapping
     public String test(){
         return "test";
@@ -74,7 +74,7 @@ public class DocumentController {
      * @since 1.0
      *
      */
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT','PARENT')")
     @GetMapping(path = "view/{documentUuid}")
     public void viewDoc(
             @PathVariable("documentUuid") UUID documentUuid,
@@ -96,7 +96,7 @@ public class DocumentController {
         StreamUtils.copy(inputStream,response.getOutputStream());
     }
 
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT','PARENT')")
     @GetMapping("/student/{studentId}")
     public ResponseEntity<List<Map<String, String>>> getStudentDocuments(
             @PathVariable UUID studentId) {

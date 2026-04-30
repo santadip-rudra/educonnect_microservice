@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface StudentRepo extends JpaRepository<Student, UUID> {
     Optional<Student> findByStudentId(UUID uuid);
+
+    <T> Optional<T> findByEnrollmentNumber(String enrollmentNumber);
 }

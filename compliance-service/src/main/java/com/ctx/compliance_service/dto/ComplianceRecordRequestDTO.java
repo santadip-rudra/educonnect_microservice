@@ -1,5 +1,6 @@
 package com.ctx.compliance_service.dto;
 
+import com.ctx.compliance_service.models.ComplianceResult;
 import com.ctx.compliance_service.models.ComplianceType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,7 +16,7 @@ import java.util.UUID;
 public class ComplianceRecordRequestDTO {
     private UUID userId; // Works for both Student and Teacher IDs
     private ComplianceType type;
-    private String result;
+    private ComplianceResult result;
     private LocalDate date;
     private List<String> notes;
 }

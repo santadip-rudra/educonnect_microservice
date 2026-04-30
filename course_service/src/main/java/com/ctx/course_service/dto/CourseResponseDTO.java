@@ -17,6 +17,7 @@ public record CourseResponseDTO (
     @NotBlank UUID teacherId,
      List<ModuleResponseDTO> moduleResponseDTOList,
      List<AssessmentResponseDTO> assessmentResponseDTOList,
-     List<EnrollmentResponseDTOServe> enrollmentResponseDTOList
+     List<EnrollmentResponseDTOServe> enrollmentResponseDTOList,
+     Long credit
 ){
 }

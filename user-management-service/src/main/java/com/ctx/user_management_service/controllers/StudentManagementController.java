@@ -37,6 +37,10 @@ public class StudentManagementController {
         return  ResponseEntity.ok(studentService.findByStudentId(studentId));
     }
 
+//    @GetMapping("{enrollmentNumber}")
+//    public  ResponseEntity<StudentResponse> findByEnrollmentNumber(@PathVariable String enrollmentNumber) throws UserNotFoundException{
+//        return ResponseEntity.ok(studentService.findByEnrollmentNumber(enrollmentNumber));
+//    }
     @PostMapping
     public ResponseEntity<StudentResponse> updateStudent(@RequestBody StudentUpdateRequest request, @RequestHeader("X-User-Id") UUID studentId){
      return ResponseEntity.ok(studentService.update(studentId,request));
