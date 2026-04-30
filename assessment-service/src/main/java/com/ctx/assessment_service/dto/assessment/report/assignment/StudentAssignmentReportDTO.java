@@ -13,7 +13,7 @@ import java.util.List;
 public class StudentAssignmentReportDTO extends AssessmentReportDTO {
 
     private Integer noOfDocumentsUploaded;
-    private List<String> attachmentUriList;
+    private List<AttachmentDTO> attachments;
     private LocalDate dueDate;
     private Boolean isLate;
     private Integer attemptCount;

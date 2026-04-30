@@ -5,6 +5,7 @@ import com.ctx.assessment_service.client.UserManagementServiceClient;
 import com.ctx.assessment_service.dto.assessment.create.CreateAssessmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.create.assignment.CreateAssignmentRequestDTO;
 import com.ctx.assessment_service.dto.assessment.report.AssessmentReportDTO;
+import com.ctx.assessment_service.dto.assessment.report.assignment.AttachmentDTO;
 import com.ctx.assessment_service.dto.assessment.report.assignment.StudentAssignmentReportDTO;
 import com.ctx.assessment_service.dto.assessment.serve.AssessmentServeDTO;
 import com.ctx.assessment_service.dto.assessment.serve.assignment.AssignmentServeDTO;
@@ -139,6 +140,7 @@ public class AssignmentStrategy implements AssessmentStrategy {
         serveDTO.setAssessmentId(assessmentId);
         serveDTO.setAssignmentId(assignment.getAssignmentId());
         serveDTO.setDueDate(assignment.getDueDate());
+        serveDTO.setMaxScore(assessment.getMaxScore());
 
         if (user.getRole().equals("STUDENT")) {
             Optional<Submission> existing = submissionRepo
@@ -310,19 +312,27 @@ public class AssignmentStrategy implements AssessmentStrategy {
         List<Submission> submissions = submissionRepo.findAllByAssessmentId(assessmentId);
 
         return submissions.stream()
-                .map(sub -> StudentSubmissionSummaryDTO.builder()
-                        .submissionId(sub.getSubmissionId())
-                        .studentId(sub.getStudentId())
-                        .submissionStatus(sub.getSubmissionStatus().name())
-                        .isLate(sub.getIsLate())
-                        .attemptCount(sub.getAttemptCount())
-                        .attachmentCount(
-                                sub.getAssignmentAttachmentList() != null
-                                        ? sub.getAssignmentAttachmentList().size()
-                                        : 0
-                        )
-                        .submittedAt(sub.getCreatedAt())
-                        .build())
+                .map(sub -> {
+                    Result result = sub.getResult();
+                    boolean graded = result != null;
+
+                    return StudentSubmissionSummaryDTO.builder()
+                            .submissionId(sub.getSubmissionId())
+                            .studentId(sub.getStudentId())
+                            .submissionStatus(sub.getSubmissionStatus().name())
+                            .isLate(sub.getIsLate())
+                            .attemptCount(sub.getAttemptCount())
+                            .attachmentCount(
+                                    sub.getAssignmentAttachmentList() != null
+                                            ? sub.getAssignmentAttachmentList().size()
+                                            : 0
+                            )
+                            .submittedAt(sub.getCreatedAt())
+                            .graded(graded)
+                            .percentageScore(graded ? result.getPercentageScore() : null)
+                            .resultStatus(graded ? result.getStatus() : null)
+                            .build();
+                })
                 .toList();
     }
 
@@ -385,12 +395,15 @@ public class AssignmentStrategy implements AssessmentStrategy {
     private StudentAssignmentReportDTO buildReportDTO(Submission submission) {
         StudentAssignmentReportDTO report = new StudentAssignmentReportDTO();
 
-        List<String> urls = submission.getAssignmentAttachmentList()
+        List<AttachmentDTO> attachments = submission.getAssignmentAttachmentList()
                 .stream()
-                .map(a -> gatewayBaseUrl + "/attachment/view/" + a.getAttachmentId())
+                .map(a -> AttachmentDTO.builder()
+                        .uri(gatewayBaseUrl + "/attachment/view/" + a.getAttachmentId())
+                        .fileName(a.getFileName())
+                        .build())
                 .toList();
 
-        report.setAttachmentUriList(urls);
+        report.setAttachments(attachments);
         report.setTitle(submission.getAssessment().getTitle());
         report.setAssessmentType(AssessmentType.ASSIGNMENT);
         report.setNoOfDocumentsUploaded(submission.getAssignmentAttachmentList().size());

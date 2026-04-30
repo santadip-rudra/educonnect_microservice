@@ -133,6 +133,19 @@ public class ResultServiceImpl implements ResultService {
             throw new BadRequestException("Teacher `" + teacher.getUsername() + "` does not have permission to evaluate");
         }
 
+        Double maxScore = assessment.getMaxScore();
+        if (maxScore == null || maxScore <= 0) {
+            throw new BadRequestException(
+                    "Assessment has no valid maxScore configured (got: " + maxScore + ")"
+            );
+        }
+        if (givenScore < 0 || givenScore > maxScore) {
+            throw new BadRequestException(
+                    "Score must be between 0 and " + maxScore
+                            + " (received " + givenScore + ")"
+            );
+        }
+
         if (resultRepo.existsByAssessmentAssessmentIdAndStudentId(assessmentId, studentId)) {
             log.info("Overwriting the assignment score...");
 
@@ -140,8 +153,7 @@ public class ResultServiceImpl implements ResultService {
                     .findByAssessmentAssessmentIdAndStudentId(assessmentId, studentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Result not found"));
 
-            double score = (assessment.getMaxScore() == 0) ? 0.0
-                    : (double) givenScore / assessment.getMaxScore();
+            double score = givenScore / maxScore;
 
             result.setPercentageScore(score);
             result.setStatus(score >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
@@ -162,8 +174,7 @@ public class ResultServiceImpl implements ResultService {
             throw new BadRequestException("Student [name: " + student.getFullName() + "] has not submitted the assignment yet");
         }
 
-        double score = (assessment.getMaxScore() == 0) ? 0.0
-                : (double) givenScore / assessment.getMaxScore();
+        double score = givenScore / maxScore;
 
         Result result = new Result();
         result.setAssessment(assessment);

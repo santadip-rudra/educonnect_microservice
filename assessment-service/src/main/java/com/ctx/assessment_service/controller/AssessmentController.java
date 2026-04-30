@@ -418,4 +418,33 @@ public class AssessmentController {
                 )
         );
     }
+
+    @PatchMapping("/result/{assessmentType}/{assessmentId}/{studentId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<GenericResponse<Map<String, String>>> evaluateStudent(
+            @PathVariable("assessmentType") String assessmentType,
+            @PathVariable("assessmentId") UUID assessmentId,
+            @PathVariable("studentId") UUID studentId,
+            @RequestBody Map<String, Double> body,
+            @AuthenticationPrincipal CurrentUser teacher
+    ) throws BadRequestException, UserNotFoundException, UserNotFoundException {
+
+        Double givenScore = body.get("givenScore");
+        if (givenScore == null) {
+            throw new BadRequestException("givenScore is required");
+        }
+
+        String message = resultService.evaluateStudent(
+                assessmentId, studentId, teacher, givenScore
+        );
+
+        return ResponseEntity.ok(
+                new GenericResponse<>(
+                        Map.of("message", message),
+                        message,
+                        HttpStatus.OK.value(),
+                        LocalDateTime.now()
+                )
+        );
+    }
 }
