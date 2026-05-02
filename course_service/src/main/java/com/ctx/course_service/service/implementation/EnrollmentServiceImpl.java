@@ -66,6 +66,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getDescription(),
                 course.getDuration(),
                 course.getCourseId(),
+                course.getTeacherId(),
                 enrollment.getEnrollmentStatus().name(),
                 enrollment.getFinalGrade()
         );
@@ -97,16 +98,17 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
             // 3. Map to DTO
             return enrollments.stream()
-                    .map(enrollment -> new EnrollmentResponseDTO(
-                            enrollment.getEnrollmentId(),
-                            enrollment.getCourse() != null ? enrollment.getCourse().getTitle() : "Unknown Course",
-                            student.getFullName(),
-                            enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "",
-                            enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0,
-                            enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null,
-                            enrollment.getEnrollmentStatus() != null ? enrollment.getEnrollmentStatus().name() : "PENDING",
-                            enrollment.getFinalGrade() != null ? enrollment.getFinalGrade() : null
-                    ))
+                    .map(enrollment -> EnrollmentResponseDTO.builder()
+                            .enrollmentId(enrollment.getEnrollmentId())
+                            .courseName(enrollment.getCourse() != null ? enrollment.getCourse().getTitle() : "Unknown Course")
+                            .studentName(student.getFullName())
+                            .courseDescription(enrollment.getCourse() != null ? enrollment.getCourse().getDescription() : "")
+                            .durationInSec(enrollment.getCourse() != null ? enrollment.getCourse().getDuration() : 0.0)
+                            .courseId(enrollment.getCourse() != null ? enrollment.getCourse().getCourseId() : null)
+                            .teacherId(enrollment.getCourse() != null ? enrollment.getCourse().getTeacherId() : null)
+                            .enrollmentStatus(enrollment.getEnrollmentStatus() != null ? enrollment.getEnrollmentStatus().name() : "PENDING")
+                            .finalGrade(enrollment.getFinalGrade())
+                            .build())
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
@@ -183,6 +185,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             List<EnrollmentResponseDTOServe> enrollmentResponseDTOServeList = new ArrayList<>();
 
             for (Enrollment enrollment : course.getEnrollments()){
+
+                StudentResponse studentResponse = userManagementServiceClient.findByStudentId(enrollment.getStudentId());
+
                 EnrollmentResponseDTOServe enrollmentResponseDTOServe = EnrollmentResponseDTOServe.builder()
                         .enrollmentId(enrollment.getEnrollmentId())
                         .enrolledDate(enrollment.getEnrolledDate())
@@ -192,6 +197,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                         .isActive(enrollment.isActive())
                         .progress(enrollment.getProgress())
                         .remainingDuration(enrollment.getRemainingDuration())
+                        .enrollmentStatus(enrollment.getEnrollmentStatus() == null ? "PENDING":enrollment.getEnrollmentStatus().toString())
+                        .studentName(studentResponse.getFullName())
                         .build();
 
                 enrollmentResponseDTOServeList.add(enrollmentResponseDTOServe);
@@ -200,6 +207,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             List<AssessmentResponseDTO> assessmentResponseDTOList
                     = allAssessmentResponseDTOList.stream()
                     .filter(dto -> dto.getCourseId().equals(course.getCourseId())).toList();
+
+
 
 
             CourseResponseDTO courseResponseDTO = new CourseResponseDTO(
@@ -255,7 +264,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 course.getDescription(),
                 course.getDuration(),
                 course.getCourseId(),
-                "PENDING",
+                enrollment.getCourse().getTeacherId(),
+                "APPROVED",
                 enrollment.getFinalGrade()
         );
     }
@@ -276,6 +286,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 enrollment.getCourse().getDescription(),
                 enrollment.getCourse().getDuration(),
                 enrollment.getCourse().getCourseId(),
+                enrollment.getCourse().getTeacherId(),
                 "APPROVED",
                 enrollment.getFinalGrade()
         );
@@ -297,6 +308,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 enrollment.getCourse().getDescription(),
                 enrollment.getCourse().getDuration(),
                 enrollment.getCourse().getCourseId(),
+                enrollment.getCourse().getTeacherId(),
                 "REJECTED",
                 enrollment.getFinalGrade()
         );

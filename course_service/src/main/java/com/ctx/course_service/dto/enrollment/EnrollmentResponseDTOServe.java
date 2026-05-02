@@ -25,4 +25,8 @@ public class EnrollmentResponseDTOServe {
     private Double finalGrade;
 
     private LocalDate enrolledDate;
+
+    private String enrollmentStatus;
+
+    private String studentName;
 }

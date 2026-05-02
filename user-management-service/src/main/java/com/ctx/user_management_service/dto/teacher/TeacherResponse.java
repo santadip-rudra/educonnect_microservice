@@ -18,5 +18,4 @@ public class TeacherResponse extends UserResponse {
     private String fullName;
     private String department;
     private String qualification;
-    private String fullName;
 }
