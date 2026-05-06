@@ -20,4 +20,5 @@ public class EnrollmentResponseDTO {
     private UUID courseId;
     private UUID teacherId;
     private String enrollmentStatus;
+    private Double finalGrade;
 }

@@ -52,8 +52,6 @@ public class ResultServiceImpl implements ResultService {
         List<StudentQuizQuestionResponse> responseList =
                 studentQuizQuestionResponseRepo.findAllBySubmission(submission);
 
-        // [CHANGED] was a simple correct/total ratio — now computes per-question
-        // scores using marks and partial marking rules, then sums to a total.
         double totalEarned  = 0.0;
         double totalPossible = 0.0;
 
@@ -78,7 +76,6 @@ public class ResultServiceImpl implements ResultService {
             totalEarned += computeQuestionScore(question, correctIds, chosenIds);
         }
 
-        // percentageScore = earned / possible (0.0–1.0), or 0 if no marks defined
         double percentageScore = (totalPossible == 0) ? 0.0 : totalEarned / totalPossible;
 
         Result result = new Result();
@@ -95,16 +92,13 @@ public class ResultServiceImpl implements ResultService {
         return "result computed successfully";
     }
 
-    // ── [ADDED] per-question scoring with partial marking support ─────────────
     private double computeQuestionScore(Question question, Set<UUID> correctIds, Set<UUID> chosenIds) {
         int marks = question.getMarks() != null ? question.getMarks() : 0;
 
         if (!Boolean.TRUE.equals(question.getIsMultiOption())) {
-            // single-option: full marks or zero
             return correctIds.equals(chosenIds) ? marks : 0.0;
         }
 
-        // multi-option: any wrongly selected option = zero immediately
         long incorrectlyChosen = chosenIds.stream()
                 .filter(id -> !correctIds.contains(id))
                 .count();
@@ -117,11 +111,10 @@ public class ResultServiceImpl implements ResultService {
         if (correctlyChosen == correctIds.size()) return marks; // all correct → full marks
 
         if (Boolean.TRUE.equals(question.getIsPartMarkingAllowed())) {
-            // partial credit: (correctSelected / totalCorrect) × marks
             return ((double) correctlyChosen / correctIds.size()) * marks;
         }
 
-        return 0.0; // partial marking not allowed — must get all correct
+        return 0.0;
     }
 
     @Override
@@ -140,6 +133,19 @@ public class ResultServiceImpl implements ResultService {
             throw new BadRequestException("Teacher `" + teacher.getUsername() + "` does not have permission to evaluate");
         }
 
+        Double maxScore = assessment.getMaxScore();
+        if (maxScore == null || maxScore <= 0) {
+            throw new BadRequestException(
+                    "Assessment has no valid maxScore configured (got: " + maxScore + ")"
+            );
+        }
+        if (givenScore < 0 || givenScore > maxScore) {
+            throw new BadRequestException(
+                    "Score must be between 0 and " + maxScore
+                            + " (received " + givenScore + ")"
+            );
+        }
+
         if (resultRepo.existsByAssessmentAssessmentIdAndStudentId(assessmentId, studentId)) {
             log.info("Overwriting the assignment score...");
 
@@ -147,8 +153,7 @@ public class ResultServiceImpl implements ResultService {
                     .findByAssessmentAssessmentIdAndStudentId(assessmentId, studentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Result not found"));
 
-            double score = (assessment.getMaxScore() == 0) ? 0.0
-                    : (double) givenScore / assessment.getMaxScore();
+            double score = givenScore / maxScore;
 
             result.setPercentageScore(score);
             result.setStatus(score >= 0.4 ? ResultStatus.PASSED : ResultStatus.FAILED);
@@ -169,8 +174,7 @@ public class ResultServiceImpl implements ResultService {
             throw new BadRequestException("Student [name: " + student.getFullName() + "] has not submitted the assignment yet");
         }
 
-        double score = (assessment.getMaxScore() == 0) ? 0.0
-                : (double) givenScore / assessment.getMaxScore();
+        double score = givenScore / maxScore;
 
         Result result = new Result();
         result.setAssessment(assessment);

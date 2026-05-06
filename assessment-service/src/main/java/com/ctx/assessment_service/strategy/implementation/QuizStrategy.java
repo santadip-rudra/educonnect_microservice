@@ -460,10 +460,6 @@ public class QuizStrategy implements AssessmentStrategy {
 
 
     @Override
-    // REQUIRES_NEW gives this method its own transaction.
-    // When DataIntegrityViolationException is thrown by saveAndFlush, the inner
-    // transaction rolls back cleanly, and the catch block's re-query runs in a
-    // fresh context that can see the committed row from a concurrent request.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public QuizSessionResponseDTO startSession(UUID assessmentId, CurrentUser user) {
 
